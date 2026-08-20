@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String       @id @default(uuid())
+  email        String       @unique
+  passwordHash String
+  pseudo       String
+  isAdmin      Boolean      @default(false)
+  createdAt    DateTime     @default(now())
+  gamePlayers  GamePlayer[]
+
+  @@map("users")
+}
+
+enum GameStatus {
+  WAITING
+  IN_PROGRESS
+  FINISHED
+  ABANDONED
+}
+
+enum MoveType {
+  PLACE
+  EXCHANGE
+  PASS
+}
+
+model Game {
+  id     String     @id @default(uuid())
+  /// Code court utilisé dans le lien d'invitation (ex: /join/xxxx).
+  inviteCode String @unique @default(cuid())
+  status GameStatus @default(WAITING)
+  maxPlayers Int @default(4)
+
+  /// Snapshot JSON du plateau (Board), pour rehydratation instantanée au redémarrage.
+  /// null tant que la partie est en statut WAITING (pas encore démarrée).
+  boardState Json?
+  /// Snapshot JSON du sac de lettres restant (Letter[]). null tant que WAITING.
+  bagState Json?
+
+  currentTurnIndex  Int @default(0)
+  consecutivePasses Int @default(0)
+  turnNumber        Int @default(0)
+
+  /// null = pas de timeout ; sinon durée en secondes avant auto-pass du joueur au tour.
+  turnTimeoutSeconds Int?
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  startedAt  DateTime?
+  finishedAt DateTime?
+
+  players GamePlayer[]
+  moves   Move[]
+
+  @@map("games")
+}
+
+model GamePlayer {
+  id     String @id @default(uuid())
+  game   Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  gameId String
+
+  /// Renseigné pour un joueur avec compte ; null pour un invité.
+  user   User?   @relation(fields: [userId], references: [id])
+  userId String?
+
+  /// Renseignés pour un joueur invité (pas de ligne User).
+  guestName String?
+  /// Cookie anonyme unique par navigateur, réutilisé sur toutes les parties rejointes.
+  guestId String?
+
+  seat  Int
+  /// Snapshot JSON du chevalet courant (Letter[]). null tant que la partie n'a pas démarré.
+  rack  Json?
+  score Int @default(0)
+
+  isConnected Boolean  @default(false)
+  joinedAt    DateTime @default(now())
+
+  moves Move[]
+
+  @@unique([gameId, seat])
+  @@map("game_players")
+}
+
+model Move {
+  id     String @id @default(uuid())
+  game   Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  gameId String
+
+  gamePlayer   GamePlayer @relation(fields: [gamePlayerId], references: [id], onDelete: Cascade)
+  gamePlayerId String
+
+  turnNumber Int
+  type       MoveType
+
+  /// Placement[] posé ce coup (null pour EXCHANGE/PASS).
+  tilesPlaced Json?
+  /// WordFormed[] formés ce coup (null pour EXCHANGE/PASS).
+  wordsFormed Json?
+  score       Int   @default(0)
+  /// Chevalet du joueur après application du coup (Letter[]).
+  rackAfter   Json
+
+  /// 'player' | 'timeout' — permet de distinguer un passe automatique par timeout.
+  triggeredBy String @default("player")
+
+  createdAt DateTime @default(now())
+
+  @@map("moves")
+}
+
+model DictionaryWord {
+  id        Int      @id @default(autoincrement())
+  /// Normalisé : MAJUSCULES, sans accents/apostrophes/traits d'union.
+  word      String   @unique
+  /// "seed" ou "admin:<userId>" pour la traçabilité des ajouts manuels.
+  source    String?
+  createdAt DateTime @default(now())
+
+  @@map("dictionary_words")
+}
