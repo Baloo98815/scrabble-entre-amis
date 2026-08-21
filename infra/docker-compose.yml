@@ -50,6 +50,11 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - certbot_www:/var/www/certbot:ro
       - certbot_conf:/etc/letsencrypt:ro
+    # Permet à un vhost ajouté manuellement dans nginx/conf.d/ de faire un proxy_pass vers
+    # un service tournant directement sur l'hôte (hors Docker) via host.docker.internal,
+    # p. ex. pour mutualiser ce nginx/Certbot avec un autre service du VPS.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - server
       - web
