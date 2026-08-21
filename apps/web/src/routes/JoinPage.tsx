@@ -4,6 +4,7 @@ import type { GameSummary } from '@scrabble/shared';
 import { joinGame, previewGame } from '../api/games.js';
 import { ApiError } from '../api/http.js';
 import { useAuthContext } from '../state/AuthContext.js';
+import { getRememberedPseudo, rememberPseudo } from '../utils/guestPseudo.js';
 
 export function JoinPage() {
   const { inviteCode } = useParams<{ inviteCode: string }>();
@@ -11,7 +12,7 @@ export function JoinPage() {
   const navigate = useNavigate();
 
   const [game, setGame] = useState<GameSummary | null>(null);
-  const [pseudo, setPseudo] = useState('');
+  const [pseudo, setPseudo] = useState(getRememberedPseudo);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
@@ -32,6 +33,7 @@ export function JoinPage() {
     setJoining(true);
     try {
       const res = await joinGame(inviteCode, { pseudo: user ? undefined : pseudo.trim() });
+      if (!user) rememberPseudo(pseudo);
       navigate(`/game/${res.game.id}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Impossible de rejoindre la partie.');

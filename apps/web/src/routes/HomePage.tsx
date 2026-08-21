@@ -4,6 +4,7 @@ import { createGame } from '../api/games.js';
 import { ApiError } from '../api/http.js';
 import { logout } from '../api/auth.js';
 import { useAuthContext } from '../state/AuthContext.js';
+import { getRememberedPseudo, rememberPseudo } from '../utils/guestPseudo.js';
 
 export function HomePage() {
   const { user, loading, refresh } = useAuthContext();
@@ -12,7 +13,7 @@ export function HomePage() {
   const [maxPlayers, setMaxPlayers] = useState(4);
   const [timeoutEnabled, setTimeoutEnabled] = useState(false);
   const [timeoutSeconds, setTimeoutSeconds] = useState(90);
-  const [pseudo, setPseudo] = useState('');
+  const [pseudo, setPseudo] = useState(getRememberedPseudo);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -30,6 +31,7 @@ export function HomePage() {
         turnTimeoutSeconds: timeoutEnabled ? timeoutSeconds : null,
         pseudo: user ? undefined : pseudo.trim(),
       });
+      if (!user) rememberPseudo(pseudo);
       navigate(`/game/${game.id}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Impossible de créer la partie.');

@@ -8,6 +8,7 @@ import { PlayerList } from '../components/players/PlayerList.js';
 import { MoveHistory } from '../components/history/MoveHistory.js';
 import { WordChecker } from '../components/game/WordChecker.js';
 import { BlankLetterModal } from '../components/game/BlankLetterModal.js';
+import { ConnectionBanner } from '../components/game/ConnectionBanner.js';
 import { ExchangePanel } from '../components/game/ExchangePanel.js';
 import { TurnTimer } from '../components/game/TurnTimer.js';
 import { useGameConnection, MoveError } from '../hooks/useGameConnection.js';
@@ -135,6 +136,7 @@ export function GamePage() {
   if (store.status === 'WAITING') {
     return (
       <div className="page page--centered">
+        <ConnectionBanner connected={connected} />
         <h1>Salle d'attente</h1>
         <p>Partage ce lien avec tes amis pour qu'ils rejoignent la partie :</p>
         <div className="invite-link">
@@ -184,6 +186,7 @@ export function GamePage() {
   return (
     <div className="page game-page">
       <aside className="game-page__sidebar">
+        <ConnectionBanner connected={connected} />
         <PlayerList players={store.players} currentTurnIndex={store.currentTurnIndex} showRackCount />
         {isMyTurn && <p className="game-page__turn">C'est ton tour ! <TurnTimer deadline={store.turnDeadline} /></p>}
         {!isMyTurn && <p className="game-page__turn"><TurnTimer deadline={store.turnDeadline} /></p>}
