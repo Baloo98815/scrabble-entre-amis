@@ -20,7 +20,50 @@ stratégie de tests.
 ```bash
 corepack enable
 pnpm install
-pnpm --filter @scrabble/shared test
+
+# Base de données locale (Postgres + Adminer sur http://localhost:8080)
+docker compose -f infra/docker-compose.dev.yml up -d
+
+# Dans apps/server : copier .env (déjà fourni pour le dev) puis migrer
+cd apps/server
+npx prisma migrate dev
+
+# Dictionnaire : télécharger Lexique383.tsv depuis lexique.org, puis
+pnpm run seed:normalize <chemin-vers-Lexique383.tsv>
+pnpm run seed
+
+# Lancer les deux serveurs (2 terminaux, depuis la racine)
+pnpm dev:server   # http://localhost:3000
+pnpm dev:web      # http://localhost:5173 (proxy /api et /socket.io vers le serveur)
 ```
 
-D'autres instructions (base de données, serveur, client) seront ajoutées au fil des jalons.
+Tests : `pnpm build && pnpm -r run test` depuis la racine (build nécessaire car les apps
+consomment `@scrabble/shared` via son dossier `dist/`).
+
+## Déploiement (VPS Ubuntu)
+
+Prérequis sur le VPS : Docker + le plugin Docker Compose installés, le nom de domaine qui
+pointe déjà (enregistrement DNS de type A) vers l'IP du VPS, les ports 80 et 443 ouverts.
+
+```bash
+# Sur le VPS
+git clone https://github.com/Baloo98815/scrabble-entre-amis.git
+cd scrabble-entre-amis
+cp infra/.env.example infra/.env
+nano infra/.env   # DOMAIN, LETSENCRYPT_EMAIL, POSTGRES_PASSWORD, JWT_SECRET
+
+./infra/deploy.sh
+```
+
+`deploy.sh` est idempotent : il construit les images, démarre Postgres/serveur/web, obtient
+automatiquement le certificat Let's Encrypt au tout premier lancement (bascule d'une config
+Nginx temporaire HTTP-only vers la config HTTPS complète une fois le certificat obtenu), et
+démarre le renouvellement automatique. Pour mettre à jour après un nouveau commit :
+
+```bash
+git pull
+./infra/deploy.sh
+```
+
+Le mot de passe Postgres et le secret JWT doivent être générés une seule fois et ne jamais
+être committés (`infra/.env` est gitignored) — par exemple avec `openssl rand -base64 48`.

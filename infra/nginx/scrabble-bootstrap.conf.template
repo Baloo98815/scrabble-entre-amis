@@ -1,0 +1,16 @@
+# Config temporaire (HTTP uniquement), utilisée le temps d'obtenir le tout premier
+# certificat Let's Encrypt — avant ça, nginx ne peut pas démarrer avec un bloc HTTPS
+# qui référence un certificat qui n'existe pas encore. Généré par deploy.sh.
+server {
+    listen 80;
+    server_name __DOMAIN__;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 200 'Scrabble en ligne — certificat en cours de configuration...';
+        add_header Content-Type text/plain;
+    }
+}
