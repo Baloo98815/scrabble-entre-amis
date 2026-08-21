@@ -47,7 +47,10 @@ docker compose up -d server web nginx
 
 if [ "$CERT_PRESENT" != "yes" ]; then
   echo "==> Obtention du certificat Let's Encrypt pour ${DOMAIN}..."
-  docker compose run --rm certbot certonly --webroot -w /var/www/certbot \
+  # --entrypoint certbot : le service "certbot" définit un entrypoint fixe (boucle de
+  # renouvellement, voir plus bas) qui ignorerait sinon silencieusement la commande
+  # "certonly" passée ici.
+  docker compose run --rm --entrypoint certbot certbot certonly --webroot -w /var/www/certbot \
     -d "${DOMAIN}" --email "${LETSENCRYPT_EMAIL}" --agree-tos --no-eff-email -n
 
   echo "==> Bascule sur la configuration HTTPS complète..."
