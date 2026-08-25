@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { createGame } from '../api/games.js';
 import { ApiError } from '../api/http.js';
 import { logout } from '../api/auth.js';
+import { DictionaryAdminForm } from '../components/admin/DictionaryAdminForm.js';
 import { useAuthContext } from '../state/AuthContext.js';
 import { getRememberedPseudo, rememberPseudo } from '../utils/guestPseudo.js';
 
@@ -119,6 +120,8 @@ export function HomePage() {
       <p className="page__hint">
         Pour rejoindre une partie créée par un ami, ouvre simplement le lien qu'il t'a envoyé.
       </p>
+
+      {user?.isAdmin && <DictionaryAdminForm />}
     </div>
   );
 }

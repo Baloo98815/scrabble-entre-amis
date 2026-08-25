@@ -124,6 +124,14 @@ button:disabled {
   color: #b3261e;
   font-size: 0.9rem;
 }
+.form__success {
+  color: #1e7b34;
+  font-size: 0.9rem;
+}
+.form__actions {
+  display: flex;
+  gap: 0.5rem;
+}
 
 .invite-link {
   display: flex;
