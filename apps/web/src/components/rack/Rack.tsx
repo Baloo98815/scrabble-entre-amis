@@ -11,11 +11,12 @@ export interface RackSlot {
 
 interface RackProps {
   slots: RackSlot[];
-  interactive: boolean;
   onShuffle: () => void;
 }
 
-export function Rack({ slots, interactive, onShuffle }: RackProps) {
+/** Le chevalet reste manipulable (réorganiser, mélanger) même hors de son tour — seule la
+ * pose sur le plateau est réservée à son tour (cf. Tile.tsx). */
+export function Rack({ slots, onShuffle }: RackProps) {
   const ids = slots.map(({ index }) => `rack-${index}`);
 
   return (
@@ -23,7 +24,7 @@ export function Rack({ slots, interactive, onShuffle }: RackProps) {
       <div className="rack__tiles">
         <SortableContext items={ids} strategy={horizontalListSortingStrategy}>
           {slots.map(({ index, letter }) => (
-            <Tile key={index} id={`rack-${index}`} index={index} letter={letter} interactive={interactive} />
+            <Tile key={index} id={`rack-${index}`} index={index} letter={letter} />
           ))}
         </SortableContext>
       </div>

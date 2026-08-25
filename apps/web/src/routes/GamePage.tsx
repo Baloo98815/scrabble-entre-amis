@@ -55,14 +55,16 @@ export function GamePage() {
 
   function handleDragEnd(event: DragEndEvent): void {
     try {
-      if (!canPlace) return;
       const { active, over } = event;
       if (!over) return;
       const source = active.data.current as { letter: string; index: number } | undefined;
       if (!source) return;
 
+      // Réorganiser son chevalet (y compris hors de son tour) n'a aucune incidence sur la
+      // partie — seule la pose sur le plateau doit attendre son tour.
       const boardTarget = over.data.current as { row: number; col: number } | undefined;
       if (boardTarget && typeof boardTarget.row === 'number') {
+        if (!canPlace) return;
         if (source.letter === '*') {
           setPendingBlankDrop({ row: boardTarget.row, col: boardTarget.col });
         } else {
@@ -262,7 +264,6 @@ export function GamePage() {
               ) : (
                 <Rack
                   slots={placement.visibleRack}
-                  interactive={canPlace}
                   onShuffle={() => setRackOrder(shuffleArray(rackOrder))}
                 />
               )}
