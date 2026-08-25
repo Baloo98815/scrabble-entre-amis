@@ -28,9 +28,11 @@ docker compose -f infra/docker-compose.dev.yml up -d
 cd apps/server
 npx prisma migrate dev
 
-# Dictionnaire : télécharger Lexique383.tsv depuis lexique.org, puis
+# Dictionnaire : apps/server/data/dictionary.json est déjà fourni et chargé en mémoire au
+# démarrage du serveur (aucune dépendance à la base pour valider un mot). Pour y ajouter
+# quelques mots ponctuels : éditer apps/server/data/custom-words.json (un tableau JSON de
+# mots). Pour régénérer tout le dictionnaire depuis une nouvelle source Lexique383 :
 pnpm run seed:normalize <chemin-vers-Lexique383.tsv>
-pnpm run seed
 
 # Lancer les deux serveurs (2 terminaux, depuis la racine)
 pnpm dev:server   # http://localhost:3000

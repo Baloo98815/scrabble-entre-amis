@@ -1,22 +1,31 @@
-import { useDraggable } from '@dnd-kit/core';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { letterValue } from '@scrabble/shared';
 import type { CSSProperties } from 'react';
 
 interface TileProps {
   id: string;
+  /** Position dans le chevalet complet (rackOrder) — utilisée pour le drop sur le plateau
+   * (via `letter`) et pour la réorganisation par glisser-déposer au sein du chevalet. */
+  index: number;
   letter: string;
   interactive: boolean;
 }
 
-export function Tile({ id, letter, interactive }: TileProps) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+export function Tile({ id, index, letter, interactive }: TileProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
-    data: { letter },
+    data: { letter, index },
     disabled: !interactive,
   });
 
-  const style: CSSProperties | undefined = transform
-    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, zIndex: isDragging ? 10 : undefined }
-    : undefined;
+  const style: CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition: isDragging ? undefined : transition,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  const isBlank = letter === '*';
 
   return (
     <div
@@ -24,11 +33,12 @@ export function Tile({ id, letter, interactive }: TileProps) {
       style={style}
       {...listeners}
       {...attributes}
-      className={`tile${letter === '*' ? ' tile--blank' : ''}${isDragging ? ' tile--dragging' : ''}${
+      className={`tile${isBlank ? ' tile--blank' : ''}${isDragging ? ' tile--dragging' : ''}${
         interactive ? '' : ' tile--disabled'
       }`}
     >
-      {letter === '*' ? '' : letter}
+      {isBlank ? '' : letter}
+      {!isBlank && <span className="tile-value">{letterValue(letter)}</span>}
     </div>
   );
 }

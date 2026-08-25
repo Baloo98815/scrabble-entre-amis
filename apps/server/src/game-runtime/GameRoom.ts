@@ -133,6 +133,21 @@ export class GameRoom {
     return this.buildStatePayload(gamePlayerId);
   }
 
+  /**
+   * Attache un socket en lecture seule (mode spectateur) : rejoint la room pour recevoir le
+   * plateau et les diffusions en direct (move:applied, game:started, game:ended), sans être
+   * ajouté à `this.sockets` — donc invisible du roster de connexion des joueurs, et surtout
+   * sans gamePlayerId associé côté handlers socket, ce qui bloque naturellement toute
+   * tentative de move:place/exchange/pass/game:start (déjà gardés par `NOT_JOINED`).
+   */
+  async attachSpectator(socket: IOSocket): Promise<GameStatePayload> {
+    await socket.join(this.roomName);
+    // Aucun gamePlayerId réel ne correspondra jamais à cet identifiant : yourRack reste
+    // vide et isYou reste false pour tout le monde, exactement ce qu'il faut pour un
+    // spectateur.
+    return this.buildStatePayload('__spectator__');
+  }
+
   /** À appeler à la déconnexion d'un socket (quel que soit le joueur). */
   async detachSocket(socket: IOSocket): Promise<void> {
     for (const [gamePlayerId, sockets] of this.sockets.entries()) {

@@ -66,14 +66,27 @@ export function useGameConnection(gameId: string | null): {
     function handleDisconnect(): void {
       setConnected(false);
     }
+    // Filet de sécurité : un payload inattendu qui ferait planter un handler ne doit jamais
+    // laisser le client figé sur un état obsolète (ex. plus interactif après avoir validé un
+    // coup, jusqu'à un rechargement manuel) — on logue l'erreur (pour enfin capter le
+    // message exact si ça se reproduit) et on force une resynchronisation complète.
+    function safely(label: string, fn: () => void): void {
+      try {
+        fn();
+      } catch (err) {
+        console.error(`[useGameConnection] erreur dans ${label}, resynchronisation :`, err);
+        join();
+      }
+    }
+
     function handleGameState(payload: GameStatePayload): void {
-      applyGameState(payload);
+      safely('handleGameState', () => applyGameState(payload));
     }
     function handleMoveApplied(payload: MoveAppliedPayload): void {
-      applyMoveApplied(payload);
+      safely('handleMoveApplied', () => applyMoveApplied(payload));
     }
     function handleRackUpdate(payload: { rack: Letter[] }): void {
-      applyRackUpdate(payload.rack);
+      safely('handleRackUpdate', () => applyRackUpdate(payload.rack));
     }
     function handlePlayerDisconnected(payload: { gamePlayerId: string }): void {
       setPlayerConnection(payload.gamePlayerId, false);

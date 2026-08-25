@@ -10,6 +10,5 @@ coverage/
 .vscode/
 .idea/
 apps/server/prisma/dev.db
-apps/server/prisma/seed/data/
 infra/nginx/conf.d/
 .claude/scheduled_tasks.lock
