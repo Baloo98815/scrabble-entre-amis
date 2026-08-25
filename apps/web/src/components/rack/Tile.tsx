@@ -9,14 +9,18 @@ interface TileProps {
    * (via `letter`) et pour la réorganisation par glisser-déposer au sein du chevalet. */
   index: number;
   letter: string;
-  interactive: boolean;
 }
 
-export function Tile({ id, index, letter, interactive }: TileProps) {
+/**
+ * Toujours réordonnable, même hors de son tour — seul le dépôt sur le plateau est bloqué
+ * (par le drop cible en lecture seule côté Cell.tsx + le garde-fou dans handleDragEnd),
+ * pas la manipulation du chevalet lui-même. Réorganiser sa main en attendant son tour n'a
+ * aucune incidence sur la partie.
+ */
+export function Tile({ id, index, letter }: TileProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
     data: { letter, index },
-    disabled: !interactive,
   });
 
   const style: CSSProperties = {
@@ -33,9 +37,7 @@ export function Tile({ id, index, letter, interactive }: TileProps) {
       style={style}
       {...listeners}
       {...attributes}
-      className={`tile${isBlank ? ' tile--blank' : ''}${isDragging ? ' tile--dragging' : ''}${
-        interactive ? '' : ' tile--disabled'
-      }`}
+      className={`tile${isBlank ? ' tile--blank' : ''}${isDragging ? ' tile--dragging' : ''}`}
     >
       {isBlank ? '' : letter}
       {!isBlank && <span className="tile-value">{letterValue(letter)}</span>}

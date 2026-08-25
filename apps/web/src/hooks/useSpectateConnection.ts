@@ -72,12 +72,27 @@ export function useSpectateConnection(gameId: string | null): {
       socket.connect();
     }
 
+    // Même filet de sécurité que useGameConnection contre une connexion silencieusement
+    // morte (onglet resté en arrière-plan, etc.) — resynchronise dès que l'onglet redevient
+    // visible plutôt que d'attendre le ping-timeout interne de Socket.IO.
+    function resyncNow(): void {
+      if (document.visibilityState !== 'visible') return;
+      if (socket.connected) spectate();
+      else socket.connect();
+    }
+    document.addEventListener('visibilitychange', resyncNow);
+    window.addEventListener('focus', resyncNow);
+    window.addEventListener('online', resyncNow);
+
     return () => {
       cancelled = true;
       socket.off('connect', handleConnect);
       socket.off('disconnect', handleDisconnect);
       socket.off('game:state', handleGameState);
       socket.off('move:applied', handleMoveApplied);
+      document.removeEventListener('visibilitychange', resyncNow);
+      window.removeEventListener('focus', resyncNow);
+      window.removeEventListener('online', resyncNow);
       socket.emit('game:leave', () => undefined);
       reset();
     };

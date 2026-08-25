@@ -289,10 +289,6 @@ button:disabled {
 .tile--dragging {
   opacity: 0.6;
 }
-.tile--disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 .tile--selectable {
   cursor: pointer;
 }

@@ -109,6 +109,21 @@ export function useGameConnection(gameId: string | null): {
       socket.connect();
     }
 
+    // Filet de sécurité contre une connexion silencieusement morte : le ping-timeout
+    // interne de Socket.IO peut mettre jusqu'à ~45 s à détecter une coupure (et davantage si
+    // la reconnexion échoue une première fois), en particulier sur un onglet resté en
+    // arrière-plan pendant le tour de l'adversaire (les navigateurs ralentissent les timers
+    // des onglets inactifs). Dès que l'onglet redevient visible/actif, ou que le réseau
+    // revient, on force une resynchronisation immédiate plutôt que d'attendre ce délai.
+    function resyncNow(): void {
+      if (document.visibilityState !== 'visible') return;
+      if (socket.connected) join();
+      else socket.connect();
+    }
+    document.addEventListener('visibilitychange', resyncNow);
+    window.addEventListener('focus', resyncNow);
+    window.addEventListener('online', resyncNow);
+
     return () => {
       cancelled = true;
       socket.off('connect', handleConnect);
@@ -118,6 +133,9 @@ export function useGameConnection(gameId: string | null): {
       socket.off('rack:update', handleRackUpdate);
       socket.off('game:playerDisconnected', handlePlayerDisconnected);
       socket.off('game:playerReconnected', handlePlayerReconnected);
+      document.removeEventListener('visibilitychange', resyncNow);
+      window.removeEventListener('focus', resyncNow);
+      window.removeEventListener('online', resyncNow);
       if (hasJoined) socket.emit('game:leave', () => undefined);
       reset();
     };
