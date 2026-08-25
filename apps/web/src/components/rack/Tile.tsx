@@ -1,4 +1,5 @@
 import { useDraggable } from '@dnd-kit/core';
+import { letterValue } from '@scrabble/shared';
 import type { CSSProperties } from 'react';
 
 interface TileProps {
@@ -18,17 +19,20 @@ export function Tile({ id, letter, interactive }: TileProps) {
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, zIndex: isDragging ? 10 : undefined }
     : undefined;
 
+  const isBlank = letter === '*';
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...listeners}
       {...attributes}
-      className={`tile${letter === '*' ? ' tile--blank' : ''}${isDragging ? ' tile--dragging' : ''}${
+      className={`tile${isBlank ? ' tile--blank' : ''}${isDragging ? ' tile--dragging' : ''}${
         interactive ? '' : ' tile--disabled'
       }`}
     >
-      {letter === '*' ? '' : letter}
+      {isBlank ? '' : letter}
+      {!isBlank && <span className="tile-value">{letterValue(letter)}</span>}
     </div>
   );
 }

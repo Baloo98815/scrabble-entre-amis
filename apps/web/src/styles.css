@@ -8,10 +8,12 @@
   --accent-dark: #8a4a13;
   --tile-bg: #f2d9a0;
   --tile-border: #c9a45c;
-  --tw: #d9534f;
-  --dw: #f0b3ae;
-  --tl: #337ab7;
-  --dl: #a9d1f0;
+  /* Palette des cases bonus : tons chauds différenciés (du plus rare au plus courant). */
+  --tw: #c1440e;
+  --tw-ink: #fff3e9;
+  --dw: #e2926b;
+  --tl: #d1a136;
+  --dl: #e8cf8a;
   --border: #ddd0ba;
   font-family: 'Segoe UI', system-ui, sans-serif;
 }
@@ -134,8 +136,49 @@ button:disabled {
   border: 1px solid var(--border);
 }
 
-/* Plateau */
+/* Plateau + coordonnées (lettres en colonne, chiffres en ligne, comme au Scrabble physique) */
+.board-coords {
+  display: inline-grid;
+  grid-template-columns: 20px auto;
+  grid-template-rows: 20px auto;
+  width: fit-content;
+}
+.board-coords__corner {
+  grid-column: 1;
+  grid-row: 1;
+}
+.board-coords__cols {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+}
+.board-coords__col {
+  width: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.board-coords__rows {
+  grid-column: 1;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+}
+.board-coords__row {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--muted);
+}
 .board {
+  grid-column: 2;
+  grid-row: 2;
   display: inline-flex;
   flex-direction: column;
   border: 2px solid var(--accent-dark);
@@ -190,10 +233,28 @@ button:disabled {
   color: var(--accent-dark);
   font-style: italic;
 }
+.tile-value {
+  position: absolute;
+  bottom: 1px;
+  right: 2px;
+  font-size: 0.5rem;
+  font-weight: 600;
+  line-height: 1;
+}
 
-/* Bonus color-coding, based on the aria-label prefix set by BONUS_LABELS via className hooks */
-.cell:has(.cell__bonus:not(.cell__bonus--center)) {
-  background: #efe7d6;
+/* Cases bonus : un fond distinct par type, posé via la classe cell--bonus-* (Cell.tsx). */
+.cell--bonus-tw {
+  background: var(--tw);
+  color: var(--tw-ink);
+}
+.cell--bonus-dw {
+  background: var(--dw);
+}
+.cell--bonus-tl {
+  background: var(--tl);
+}
+.cell--bonus-dl {
+  background: var(--dl);
 }
 
 /* Chevalet */
@@ -208,6 +269,7 @@ button:disabled {
   gap: 0.35rem;
 }
 .tile {
+  position: relative;
   width: 38px;
   height: 38px;
   background: var(--tile-bg);

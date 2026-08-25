@@ -1,5 +1,6 @@
 import { useDroppable } from '@dnd-kit/core';
-import type { BoardCell } from '@scrabble/shared';
+import type { BoardCell, BonusType } from '@scrabble/shared';
+import { letterValue } from '@scrabble/shared';
 import type { Direction } from '../../hooks/placementReducer.js';
 
 interface CellProps {
@@ -7,6 +8,7 @@ interface CellProps {
   col: number;
   confirmedTile: BoardCell;
   pendingLetter: { letter: string; isBlank: boolean } | null;
+  bonusType: BonusType;
   bonusLabel: string | null;
   isCenter: boolean;
   isSelected: boolean;
@@ -21,6 +23,7 @@ export function Cell({
   col,
   confirmedTile,
   pendingLetter,
+  bonusType,
   bonusLabel,
   isCenter,
   isSelected,
@@ -50,7 +53,7 @@ export function Cell({
 
   const classNames = [
     'cell',
-    isCenter ? 'cell--center' : '',
+    isCenter ? 'cell--center' : bonusType ? `cell--bonus-${bonusType.toLowerCase()}` : '',
     confirmedTile ? 'cell--confirmed' : '',
     pendingLetter ? 'cell--pending' : '',
     isSelected ? 'cell--selected' : '',
@@ -69,7 +72,10 @@ export function Cell({
       aria-label={letterToShow ? `Case ${row + 1},${col + 1} : ${letterToShow}` : `Case ${row + 1},${col + 1}`}
     >
       {letterToShow ? (
-        <span className={`tile-letter${isBlankTile ? ' tile-letter--blank' : ''}`}>{letterToShow}</span>
+        <>
+          <span className={`tile-letter${isBlankTile ? ' tile-letter--blank' : ''}`}>{letterToShow}</span>
+          {!isBlankTile && <span className="tile-value">{letterValue(letterToShow)}</span>}
+        </>
       ) : (
         <>
           {isCenter && <span className="cell__bonus cell__bonus--center">★</span>}
