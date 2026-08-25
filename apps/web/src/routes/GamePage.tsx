@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { DndContext, type DragEndEvent } from '@dnd-kit/core';
+import { arrayMove } from '@dnd-kit/sortable';
 import type { Letter } from '@scrabble/shared';
 import { GameBoard } from '../components/board/GameBoard.js';
 import { Rack } from '../components/rack/Rack.js';
@@ -13,6 +14,7 @@ import { ExchangePanel } from '../components/game/ExchangePanel.js';
 import { TurnTimer } from '../components/game/TurnTimer.js';
 import { useGameConnection, MoveError } from '../hooks/useGameConnection.js';
 import { useKeyboardPlacement } from '../hooks/useKeyboardPlacement.js';
+import { useLivePreviewScore } from '../hooks/useLivePreviewScore.js';
 import { useGameStore } from '../state/gameStore.js';
 
 function shuffleArray<T>(items: T[]): T[] {
@@ -43,23 +45,41 @@ export function GamePage() {
   const canPlace = isMyTurn;
 
   const placement = useKeyboardPlacement(store.board, rackOrder, canPlace);
+  const previewScore = useLivePreviewScore(store.board, placement.pending);
 
   const [pendingBlankDrop, setPendingBlankDrop] = useState<{ row: number; col: number } | null>(null);
   const [exchangeMode, setExchangeMode] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [hideRack, setHideRack] = useState(false);
 
   function handleDragEnd(event: DragEndEvent): void {
-    if (!canPlace) return;
-    const { active, over } = event;
-    if (!over) return;
-    const letter = (active.data.current as { letter: string } | undefined)?.letter;
-    const target = over.data.current as { row: number; col: number } | undefined;
-    if (!letter || !target) return;
-    if (letter === '*') {
-      setPendingBlankDrop({ row: target.row, col: target.col });
-    } else {
-      placement.placeLetterAt(target.row, target.col, letter, false);
+    try {
+      if (!canPlace) return;
+      const { active, over } = event;
+      if (!over) return;
+      const source = active.data.current as { letter: string; index: number } | undefined;
+      if (!source) return;
+
+      const boardTarget = over.data.current as { row: number; col: number } | undefined;
+      if (boardTarget && typeof boardTarget.row === 'number') {
+        if (source.letter === '*') {
+          setPendingBlankDrop({ row: boardTarget.row, col: boardTarget.col });
+        } else {
+          placement.placeLetterAt(boardTarget.row, boardTarget.col, source.letter, false);
+        }
+        return;
+      }
+
+      // Sinon la cible est un autre emplacement du chevalet (useSortable) : on réordonne
+      // l'affichage plutôt que de poser une lettre.
+      const rackTarget = over.data.current as { index: number } | undefined;
+      if (rackTarget && typeof rackTarget.index === 'number' && rackTarget.index !== source.index) {
+        setRackOrder(arrayMove(rackOrder, source.index, rackTarget.index));
+      }
+    } catch (err) {
+      // Ne jamais laisser un glisser-déposer inattendu planter la page en silence.
+      console.error('[GamePage] handleDragEnd a échoué :', err);
     }
   }
 
@@ -132,6 +152,7 @@ export function GamePage() {
   }
 
   const inviteUrl = store.inviteCode ? `${window.location.origin}/g/${store.inviteCode}` : '';
+  const spectateUrl = store.inviteCode ? `${window.location.origin}/watch/${store.inviteCode}` : '';
 
   if (store.status === 'WAITING') {
     return (
@@ -142,6 +163,13 @@ export function GamePage() {
         <div className="invite-link">
           <input readOnly value={inviteUrl} onFocus={(e) => e.currentTarget.select()} />
           <button type="button" onClick={() => navigator.clipboard.writeText(inviteUrl)}>
+            Copier
+          </button>
+        </div>
+        <p>Ou pour la suivre sans y jouer (lien spectateur) :</p>
+        <div className="invite-link">
+          <input readOnly value={spectateUrl} onFocus={(e) => e.currentTarget.select()} />
+          <button type="button" onClick={() => navigator.clipboard.writeText(spectateUrl)}>
             Copier
           </button>
         </div>
@@ -178,6 +206,17 @@ export function GamePage() {
             </li>
           ))}
         </ol>
+        {store.board && (
+          <GameBoard
+            board={store.board}
+            pending={[]}
+            selected={null}
+            direction="horizontal"
+            interactive={false}
+            onSelect={() => undefined}
+            onRemovePending={() => undefined}
+          />
+        )}
         <MoveHistory entries={store.moveHistory} />
       </div>
     );
@@ -218,14 +257,23 @@ export function GamePage() {
             />
           ) : (
             <>
-              <Rack
-                slots={placement.visibleRack}
-                interactive={canPlace}
-                onShuffle={() => setRackOrder(shuffleArray(rackOrder))}
-              />
+              {hideRack ? (
+                <p className="rack rack--hidden">Chevalet masqué</p>
+              ) : (
+                <Rack
+                  slots={placement.visibleRack}
+                  interactive={canPlace}
+                  onShuffle={() => setRackOrder(shuffleArray(rackOrder))}
+                />
+              )}
+              {previewScore !== null && (
+                <p className="game-page__score-preview">
+                  Score si tu valides : <strong>{previewScore} pts</strong>
+                </p>
+              )}
               <div className="game-page__controls">
                 <button type="button" onClick={placement.clear} disabled={placement.pending.length === 0}>
-                  Annuler
+                  Rappeler
                 </button>
                 <button
                   type="button"
@@ -244,6 +292,9 @@ export function GamePage() {
                   disabled={!canPlace || placement.pending.length === 0 || actionLoading}
                 >
                   Valider le coup
+                </button>
+                <button type="button" onClick={() => setHideRack((v) => !v)}>
+                  {hideRack ? 'Afficher le chevalet' : 'Cacher le chevalet'}
                 </button>
               </div>
             </>

@@ -406,6 +406,16 @@ button:disabled {
   display: flex;
   gap: 0.5rem;
   margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+.game-page__score-preview {
+  margin: 0.5rem 0 0;
+  color: var(--accent-dark);
+}
+.rack--hidden {
+  margin-top: 1rem;
+  color: var(--muted);
+  font-style: italic;
 }
 .game-page__turn {
   display: flex;

@@ -28,6 +28,7 @@ export function registerGameHandlers(io: IOServer, manager: GameRoomManager): vo
   io.on('connection', (socket: IOSocket) => {
     let joinedGameId: string | null = null;
     let joinedGamePlayerId: string | null = null;
+    let spectatingGameId: string | null = null;
 
     socket.on('game:join', async (input, ack) => {
       try {
@@ -41,6 +42,18 @@ export function registerGameHandlers(io: IOServer, manager: GameRoomManager): vo
         const payload = await room.attachSocket(socket, gamePlayerId);
         joinedGameId = gameId;
         joinedGamePlayerId = gamePlayerId;
+        ack(ok(payload));
+      } catch (err) {
+        ack(toAckError(err));
+      }
+    });
+
+    socket.on('game:spectate', async (input, ack) => {
+      try {
+        const { gameId } = gameJoinSchema.parse(input);
+        const room = await manager.getOrLoad(gameId);
+        const payload = await room.attachSpectator(socket);
+        spectatingGameId = gameId;
         ack(ok(payload));
       } catch (err) {
         ack(toAckError(err));
@@ -108,8 +121,12 @@ export function registerGameHandlers(io: IOServer, manager: GameRoomManager): vo
           if (room) await room.detachSocket(socket);
           await socket.leave(`game:${joinedGameId}`);
         }
+        if (spectatingGameId) {
+          await socket.leave(`game:${spectatingGameId}`);
+        }
         joinedGameId = null;
         joinedGamePlayerId = null;
+        spectatingGameId = null;
         ack(ok(null));
       } catch (err) {
         ack(toAckError(err));

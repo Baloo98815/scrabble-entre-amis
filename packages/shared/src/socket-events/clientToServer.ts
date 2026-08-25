@@ -19,6 +19,12 @@ export type GameJoinInput = z.infer<typeof gameJoinSchema>;
 
 export interface ClientToServerEvents {
   'game:join': (input: GameJoinInput, ack: (res: AckResponse<GameStatePayload>) => void) => void;
+  /**
+   * Rejoint la partie en lecture seule (mode spectateur) : reçoit le plateau et les mises à
+   * jour en direct, mais ne peut jamais jouer (move:place/exchange/pass restent bloqués,
+   * faute de gamePlayerId associé à ce socket).
+   */
+  'game:spectate': (input: GameJoinInput, ack: (res: AckResponse<GameStatePayload>) => void) => void;
   /** Déclenché par le créateur (siège 0) quand la partie est en attente avec ≥2 joueurs. */
   'game:start': (ack: (res: AckResponse<GameStatePayload>) => void) => void;
   'move:place': (input: MovePlaceInput, ack: (res: AckResponse<MoveAppliedPayload>) => void) => void;
