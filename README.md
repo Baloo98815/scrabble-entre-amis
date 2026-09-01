@@ -62,7 +62,21 @@ nano infra/.env   # DOMAIN, LETSENCRYPT_EMAIL, POSTGRES_PASSWORD, JWT_SECRET
 `deploy.sh` est idempotent : il construit les images, démarre Postgres/serveur/web, obtient
 automatiquement le certificat Let's Encrypt au tout premier lancement (bascule d'une config
 Nginx temporaire HTTP-only vers la config HTTPS complète une fois le certificat obtenu), et
-démarre le renouvellement automatique. Pour mettre à jour après un nouveau commit :
+démarre le renouvellement automatique.
+
+**Une seule fois, après le tout premier déploiement**, peupler le dictionnaire (le conteneur
+applique les migrations mais ne seede pas). Les données Postgres vivant dans un volume Docker
+persistant, ce seed n'est à refaire ni aux redéploiements suivants ni aux `git pull` — sauf si
+le volume est détruit :
+
+```bash
+cd infra
+docker compose exec server node_modules/.bin/tsx prisma/seed/import-words.ts
+```
+
+Si on l'oublie, le serveur logge au démarrage un avertissement « Dictionnaire vide… » et le jeu
+refuse tous les mots tant que la table `dictionary_words` est vide. Pour mettre à jour après un
+nouveau commit (aucune action dictionnaire nécessaire) :
 
 ```bash
 git pull
