@@ -17,7 +17,7 @@ describe('dictionary routes', () => {
   const adminEmail = `admin-${randomUUID()}@example.com`;
   const playerEmail = `player-${randomUUID()}@example.com`;
   const password = 'motdepasse123';
-  // Mot inventé, absent de dictionary.json/custom-words.json — sert à vérifier l'aller-retour
+  // Mot inventé, absent de la table dictionary_words — sert à vérifier l'aller-retour
   // ajout/retrait sans dépendre du contenu exact du dictionnaire officiel. Lettres
   // uniquement : normalizeWord() supprimerait tout chiffre (ex: un suffixe hexadécimal).
   const testWord = 'ZZTESTWORDINVENTE';

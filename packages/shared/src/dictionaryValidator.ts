@@ -1,9 +1,9 @@
 import { normalizeWord } from './normalizeWord.js';
 
 /**
- * Interface implémentée côté serveur (dictionary.json + custom-words.json, chargés en cache
- * mémoire au démarrage). Le moteur de règles ne connaît que cette interface — aucune
- * dépendance à une base de données ou à un fichier particulier.
+ * Interface implémentée côté serveur (table `dictionary_words`, chargée en cache mémoire au
+ * démarrage). Le moteur de règles ne connaît que cette interface — aucune dépendance à une
+ * base de données ou à un fichier particulier.
  */
 export interface DictionaryChecker {
   isValidWord(word: string): boolean;

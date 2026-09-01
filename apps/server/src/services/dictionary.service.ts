@@ -1,46 +1,31 @@
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 import { normalizeWord, type DictionaryChecker } from '@scrabble/shared';
 import { HttpError } from '../errors.js';
 import { prisma } from '../db/prisma.js';
 
-// `../../data/` : que ce fichier tourne compilé (dist/services/) ou en dev via tsx
-// (src/services/), ce chemin relatif pointe toujours vers apps/server/data/ — un dossier
-// frère de src/ et dist/, copié tel quel dans l'image Docker (cf. apps/server/Dockerfile).
-const DATA_DIR = fileURLToPath(new URL('../../data/', import.meta.url));
-const DICTIONARY_PATH = `${DATA_DIR}dictionary.json`;
-const CUSTOM_WORDS_PATH = `${DATA_DIR}custom-words.json`;
-
 let cache: Set<string> | null = null;
 
-async function readWordList(path: string): Promise<string[]> {
-  const content = await readFile(path, 'utf-8');
-  const words: unknown = JSON.parse(content);
-  if (!Array.isArray(words)) throw new Error(`${path} doit contenir un tableau JSON de mots.`);
-  return words as string[];
-}
-
 /**
- * À appeler une fois au démarrage du serveur. Fusionne en mémoire trois sources :
- * - `dictionary.json` : le dictionnaire officiel (~119k mots), statique, mis à jour
- *   uniquement via `pnpm run seed:normalize` + redéploiement.
- * - `custom-words.json` : ajouts en masse, statiques eux aussi (édition manuelle du fichier
- *   + redéploiement) — pratique pour coller une liste de mots d'un coup.
- * - la table `dictionary_words` (Postgres) : ajouts/retraits ponctuels via la route admin
- *   (`addWord`/`removeWord`) ou l'écran d'administration — la seule des trois sources
- *   modifiable à chaud, sans redéploiement. Elle utilise la base uniquement comme espace de
- *   stockage durable (le volume Docker de Postgres survit aux redéploiements, contrairement
- *   au système de fichiers du conteneur `server`, reconstruit à chaque build) ; la
- *   validation d'un mot en cours de partie ne touche elle jamais la base, seulement ce cache
- *   en mémoire.
+ * À appeler une fois au démarrage du serveur. Le dictionnaire a désormais **une seule source
+ * à l'exécution** : la table Postgres `dictionary_words`. On y charge tout en mémoire (un
+ * `Set` de mots normalisés) pour que la validation en cours de partie ne touche jamais la
+ * base, seulement ce cache.
+ *
+ * La table contient à la fois le dictionnaire principal (mots ODS, `source = 'ods'`, chargés
+ * une fois via `pnpm --filter @scrabble/server run seed:dictionary`) et les ajouts « à la
+ * volée » de l'admin (`source = 'admin:<userId>'`, via `addWord`/`removeWord`). Le fichier
+ * `data/ods-fr.txt` n'est que la source du seed initial — il n'est plus lu au runtime.
  */
 export async function loadDictionaryCache(): Promise<void> {
-  const [official, custom, adminRows] = await Promise.all([
-    readWordList(DICTIONARY_PATH),
-    readWordList(CUSTOM_WORDS_PATH),
-    prisma.dictionaryWord.findMany({ select: { word: true } }),
-  ]);
-  cache = new Set([...official, ...custom, ...adminRows.map((r) => r.word)].map(normalizeWord));
+  const rows = await prisma.dictionaryWord.findMany({ select: { word: true } });
+  cache = new Set(rows.map((r) => normalizeWord(r.word)));
+  if (cache.size === 0) {
+    // Pas de mot en base : le jeu refuserait tous les coups. On prévient explicitement plutôt
+    // que de laisser un dictionnaire vide passer inaperçu.
+    console.warn(
+      "Dictionnaire vide : aucun mot dans la table dictionary_words. " +
+        'Lancez `pnpm --filter @scrabble/server run seed:dictionary` pour le peupler.',
+    );
+  }
 }
 
 function ensureLoaded(): Set<string> {
@@ -57,7 +42,7 @@ export function isValidWord(word: string): boolean {
 /** Implémentation concrète de `DictionaryChecker`, injectée dans le moteur de règles. */
 export const dictionaryChecker: DictionaryChecker = { isValidWord };
 
-/** Ajoute un mot en base (source durable pour les ajouts à chaud) et met à jour le cache. */
+/** Ajoute un mot en base (la source unique) et met à jour le cache — effet immédiat. */
 export async function addWord(word: string, source: string): Promise<string> {
   const normalized = normalizeWord(word);
   if (!normalized) throw new HttpError(400, 'INVALID_WORD', 'Mot invalide.');
@@ -71,15 +56,15 @@ export async function addWord(word: string, source: string): Promise<string> {
 }
 
 /**
- * Retire un mot ajouté en base et du cache. Un mot venant de `dictionary.json` ou
- * `custom-words.json` ne peut pas être retiré par cette route — il resterait de toute façon
- * valide au prochain redémarrage, mieux vaut ne rien changer plutôt que de créer un état
- * incohérent qui ne survit pas à un restart.
+ * Retire un mot de la base et du cache — effet immédiat. La base étant désormais la source
+ * unique, un mot retiré le reste après redémarrage (contrairement à l'ancien modèle à
+ * fichiers, où seuls les ajouts « à chaud » étaient retirables). N'a aucun effet si le mot
+ * n'existe pas.
  */
 export async function removeWord(word: string): Promise<void> {
   const normalized = normalizeWord(word);
   const { count } = await prisma.dictionaryWord.deleteMany({ where: { word: normalized } });
-  if (count === 0) return; // pas un mot ajouté à chaud : rien à faire.
+  if (count === 0) return;
   ensureLoaded().delete(normalized);
 }
 
