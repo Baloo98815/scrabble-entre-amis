@@ -1,4 +1,4 @@
-nfra/deploy.shimport type { GameState } from './types.js';
+import type { GameState } from './types.js';
 import { letterValue } from './letterBag.js';
 
 /**
