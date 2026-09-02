@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { DndContext, type DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
@@ -12,6 +12,9 @@ import { BlankLetterModal } from '../components/game/BlankLetterModal.js';
 import { ConnectionBanner } from '../components/game/ConnectionBanner.js';
 import { ExchangePanel } from '../components/game/ExchangePanel.js';
 import { TurnTimer } from '../components/game/TurnTimer.js';
+import { TurnToast } from '../components/game/TurnToast.js';
+import { ConfirmModal } from '../components/game/ConfirmModal.js';
+import { CopyableLink } from '../components/game/CopyableLink.js';
 import { useGameConnection, MoveError } from '../hooks/useGameConnection.js';
 import { useKeyboardPlacement } from '../hooks/useKeyboardPlacement.js';
 import { useLivePreviewScore } from '../hooks/useLivePreviewScore.js';
@@ -52,6 +55,16 @@ export function GamePage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [hideRack, setHideRack] = useState(false);
+  const [showTurnToast, setShowTurnToast] = useState(false);
+  const [showPassConfirm, setShowPassConfirm] = useState(false);
+
+  // Déclenche le toast « c'est ton tour » uniquement sur la TRANSITION pas-mon-tour -> mon-tour,
+  // pas à chaque re-render où isMyTurn reste vrai (sinon il se rouvrirait en boucle).
+  const wasMyTurn = useRef(isMyTurn);
+  useEffect(() => {
+    if (isMyTurn && !wasMyTurn.current) setShowTurnToast(true);
+    wasMyTurn.current = isMyTurn;
+  }, [isMyTurn]);
 
   function handleDragEnd(event: DragEndEvent): void {
     try {
@@ -127,6 +140,9 @@ export function GamePage() {
     } catch (err) {
       setActionError(err instanceof MoveError ? err.message : 'Impossible de passer.');
     } finally {
+      // On ferme la confirmation dans tous les cas : en cas d'erreur, elle est affichée dans
+      // le <main> (sous le fond de la modale), donc la modale doit disparaître pour la voir.
+      setShowPassConfirm(false);
       setActionLoading(false);
     }
   }
@@ -162,19 +178,9 @@ export function GamePage() {
         <ConnectionBanner connected={connected} />
         <h1>Salle d'attente</h1>
         <p>Partage ce lien avec tes amis pour qu'ils rejoignent la partie :</p>
-        <div className="invite-link">
-          <input readOnly value={inviteUrl} onFocus={(e) => e.currentTarget.select()} />
-          <button type="button" onClick={() => navigator.clipboard.writeText(inviteUrl)}>
-            Copier
-          </button>
-        </div>
+        <CopyableLink label="Lien pour rejoindre" url={inviteUrl} />
         <p>Ou pour la suivre sans y jouer (lien spectateur) :</p>
-        <div className="invite-link">
-          <input readOnly value={spectateUrl} onFocus={(e) => e.currentTarget.select()} />
-          <button type="button" onClick={() => navigator.clipboard.writeText(spectateUrl)}>
-            Copier
-          </button>
-        </div>
+        <CopyableLink label="Lien spectateur" url={spectateUrl} />
         <PlayerList players={store.players} currentTurnIndex={-1} showRackCount={false} />
         {me?.seat === 0 ? (
           <>
@@ -228,6 +234,7 @@ export function GamePage() {
     <div className="page game-page">
       <aside className="game-page__sidebar">
         <ConnectionBanner connected={connected} />
+        {spectateUrl && <CopyableLink label="Lien spectateur" url={spectateUrl} />}
         <PlayerList players={store.players} currentTurnIndex={store.currentTurnIndex} showRackCount />
         {isMyTurn && <p className="game-page__turn">C'est ton tour ! <TurnTimer deadline={store.turnDeadline} /></p>}
         {!isMyTurn && <p className="game-page__turn"><TurnTimer deadline={store.turnDeadline} /></p>}
@@ -283,7 +290,11 @@ export function GamePage() {
                 >
                   Échanger des lettres
                 </button>
-                <button type="button" onClick={handlePass} disabled={!canPlace || actionLoading}>
+                <button
+                  type="button"
+                  onClick={() => setShowPassConfirm(true)}
+                  disabled={!canPlace || actionLoading}
+                >
                   Passer
                 </button>
                 <button
@@ -308,6 +319,19 @@ export function GamePage() {
       {pendingBlankDrop && (
         <BlankLetterModal onConfirm={handleBlankConfirm} onCancel={() => setPendingBlankDrop(null)} />
       )}
+
+      {showPassConfirm && (
+        <ConfirmModal
+          title="Passer ton tour ?"
+          message="Tu ne poseras aucune lettre et la main passera au joueur suivant."
+          confirmLabel="Passer mon tour"
+          loading={actionLoading}
+          onConfirm={handlePass}
+          onCancel={() => setShowPassConfirm(false)}
+        />
+      )}
+
+      <TurnToast visible={showTurnToast} onDismiss={() => setShowTurnToast(false)} />
     </div>
   );
 }

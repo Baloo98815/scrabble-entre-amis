@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requireAdmin } from '../plugins/authContext.js';
 import { addWord, isValidWord, removeWord } from '../services/dictionary.service.js';
+import { getDefinition } from '../services/definition.service.js';
 
 const wordParamSchema = z.object({ word: z.string().min(1).max(30) });
 const addWordSchema = z.object({ word: z.string().min(1).max(30) });
@@ -11,6 +12,12 @@ export async function dictionaryRoutes(app: FastifyInstance): Promise<void> {
   app.get('/check/:word', async (request) => {
     const { word } = wordParamSchema.parse(request.params);
     return { word, valid: isValidWord(word) };
+  });
+
+  // Extrait de définition Wiktionnaire (confort d'affichage, source externe non bloquante).
+  app.get('/definition/:word', async (request) => {
+    const { word } = wordParamSchema.parse(request.params);
+    return getDefinition(word);
   });
 }
 

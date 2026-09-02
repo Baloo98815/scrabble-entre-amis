@@ -34,3 +34,16 @@ export function gameDetail(gameId: string): Promise<{ game: GameSummary & { move
 export function checkWord(word: string): Promise<{ word: string; valid: boolean }> {
   return api.get<{ word: string; valid: boolean }>(`/dictionary/check/${encodeURIComponent(word)}`);
 }
+
+export interface WordDefinition {
+  word: string;
+  extract: string | null;
+  partOfSpeech: string | null;
+  title: string | null;
+  url: string;
+}
+
+/** Extrait de définition Wiktionnaire (best-effort : `extract` peut être null). */
+export function fetchDefinition(word: string): Promise<WordDefinition> {
+  return api.get<WordDefinition>(`/dictionary/definition/${encodeURIComponent(word)}`);
+}
