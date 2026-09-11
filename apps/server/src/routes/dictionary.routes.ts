@@ -14,7 +14,7 @@ export async function dictionaryRoutes(app: FastifyInstance): Promise<void> {
     return { word, valid: isValidWord(word) };
   });
 
-  // Extrait de définition Wiktionnaire (confort d'affichage, source externe non bloquante).
+  // Extraits de définition ODS via 1mot.net (confort d'affichage, source externe non bloquante).
   app.get('/definition/:word', async (request) => {
     const { word } = wordParamSchema.parse(request.params);
     return getDefinition(word);

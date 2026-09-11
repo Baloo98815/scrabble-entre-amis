@@ -19,7 +19,7 @@ export function WordChecker() {
     if (!trimmed) return;
     setLoading(true);
     try {
-      // Validité (notre dictionnaire) et définition (Wiktionnaire) en parallèle : la définition
+      // Validité (notre dictionnaire) et définition (1mot.net) en parallèle : la définition
       // est un simple confort, elle ne doit pas retarder ni bloquer le verdict de validité.
       const [check, definition] = await Promise.all([
         checkWord(trimmed),
@@ -58,13 +58,14 @@ export function WordChecker() {
           >
             {result.word.toUpperCase()} {result.valid ? 'est valide ✓' : "n'est pas dans le dictionnaire ✗"}
           </p>
-          {result.definition?.extract && (
-            <p className="word-checker__definition">
-              {result.definition.partOfSpeech && (
-                <em className="word-checker__pos">{result.definition.partOfSpeech} — </em>
-              )}
-              {result.definition.extract}
-            </p>
+          {result.definition && result.definition.extracts.length > 0 && (
+            <ul className="word-checker__definitions">
+              {result.definition.extracts.map((extract, i) => (
+                <li key={i} className="word-checker__definition">
+                  {extract}
+                </li>
+              ))}
+            </ul>
           )}
           {result.definition && (
             <a
@@ -73,7 +74,7 @@ export function WordChecker() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              {result.definition.extract ? 'Lire sur le Wiktionnaire ↗' : 'Chercher sur le Wiktionnaire ↗'}
+              {result.definition.extracts.length > 0 ? 'Lire sur 1mot.net ↗' : 'Chercher sur 1mot.net ↗'}
             </a>
           )}
         </>

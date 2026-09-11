@@ -37,13 +37,12 @@ export function checkWord(word: string): Promise<{ word: string; valid: boolean 
 
 export interface WordDefinition {
   word: string;
-  extract: string | null;
-  partOfSpeech: string | null;
-  title: string | null;
+  /** Courts extraits ODS (1mot.net) ; peut contenir plusieurs entrées ou être vide. */
+  extracts: string[];
   url: string;
 }
 
-/** Extrait de définition Wiktionnaire (best-effort : `extract` peut être null). */
+/** Extraits de définition ODS via 1mot.net (best-effort : `extracts` peut être vide). */
 export function fetchDefinition(word: string): Promise<WordDefinition> {
   return api.get<WordDefinition>(`/dictionary/definition/${encodeURIComponent(word)}`);
 }
