@@ -17,6 +17,11 @@ export function myGames(): Promise<{ games: GameSummary[] }> {
   return api.get<{ games: GameSummary[] }>('/games/mine');
 }
 
+/** Parties en attente ou en cours de l'identité courante (compte ou invité). */
+export function activeGames(): Promise<{ games: GameSummary[] }> {
+  return api.get<{ games: GameSummary[] }>('/games/active');
+}
+
 export interface MoveHistoryRow {
   id: string;
   gamePlayerId: string;

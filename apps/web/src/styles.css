@@ -785,3 +785,19 @@ button:disabled {
   cursor: pointer;
   color: var(--accent-dark);
 }
+
+.ongoing__link {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  color: white;
+  text-decoration: none;
+}
+
+.move-history__words a {
+  color: inherit;
+  text-decoration: underline dotted;
+}
+.move-history__words a:hover {
+  color: var(--accent-dark);
+}

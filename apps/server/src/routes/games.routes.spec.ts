@@ -43,6 +43,25 @@ describe('games routes', () => {
     expect(previewResponse.json().game.players[0].isYou).toBe(false);
   });
 
+  it('lists the active games of the current guest, and nothing for an anonymous visitor', async () => {
+    const createResponse = await app.inject({
+      method: 'POST',
+      url: '/api/games',
+      payload: { maxPlayers: 2, pseudo: 'Hôte' },
+    });
+    const game = createResponse.json().game;
+    createdGameIds.push(game.id);
+    const guestCookie = cookieHeader(createResponse, GUEST_COOKIE_NAME);
+
+    const mine = await app.inject({ method: 'GET', url: '/api/games/active', headers: { cookie: guestCookie } });
+    expect(mine.statusCode).toBe(200);
+    expect(mine.json().games.map((g: { id: string }) => g.id)).toContain(game.id);
+
+    const anonymous = await app.inject({ method: 'GET', url: '/api/games/active' });
+    expect(anonymous.statusCode).toBe(200);
+    expect(anonymous.json().games).toEqual([]);
+  });
+
   it('requires a pseudo for a guest to create or join a game', async () => {
     const response = await app.inject({ method: 'POST', url: '/api/games', payload: {} });
     expect(response.statusCode).toBe(400);

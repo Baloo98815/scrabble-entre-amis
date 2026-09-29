@@ -118,6 +118,20 @@ export async function listMyGames(userId: string): Promise<GameSummary[]> {
   return games.map((g) => toGameSummary(g, { kind: 'user', userId }));
 }
 
+/** Parties non terminées (en attente ou en cours) où cette identité — compte ou invité — est joueur. */
+export async function listActiveGames(viewer: Viewer): Promise<GameSummary[]> {
+  if (!viewer) return [];
+  const games = await prisma.game.findMany({
+    where: {
+      status: { in: ['WAITING', 'IN_PROGRESS'] },
+      players: { some: viewer.kind === 'user' ? { userId: viewer.userId } : { guestId: viewer.guestId } },
+    },
+    include: PLAYER_INCLUDE,
+    orderBy: { updatedAt: 'desc' },
+  });
+  return games.map((g) => toGameSummary(g, viewer));
+}
+
 /** Résout le `gamePlayerId` correspondant à cette identité pour cette partie (socket auth). */
 export async function findGamePlayerId(gameId: string, viewer: Viewer): Promise<string | null> {
   if (!viewer) return null;

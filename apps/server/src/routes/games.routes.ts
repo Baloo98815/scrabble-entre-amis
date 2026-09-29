@@ -9,6 +9,7 @@ import {
   getGameDetailForUser,
   getGamePreview,
   joinGame,
+  listActiveGames,
   listMyGames,
   type ActingIdentity,
   type Viewer,
@@ -63,6 +64,11 @@ export async function gamesRoutes(app: FastifyInstance): Promise<void> {
   app.get('/mine', async (request) => {
     const { userId } = requireUser(request);
     const games = await listMyGames(userId);
+    return { games };
+  });
+
+  app.get('/active', async (request) => {
+    const games = await listActiveGames(currentViewer(request));
     return { games };
   });
 

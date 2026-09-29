@@ -1,6 +1,7 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { createGame } from '../api/games.js';
+import type { GameSummary } from '@scrabble/shared';
+import { activeGames, createGame } from '../api/games.js';
 import { ApiError } from '../api/http.js';
 import { logout } from '../api/auth.js';
 import { DictionaryAdminForm } from '../components/admin/DictionaryAdminForm.js';
@@ -17,6 +18,19 @@ export function HomePage() {
   const [pseudo, setPseudo] = useState(getRememberedPseudo);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const [ongoing, setOngoing] = useState<GameSummary[]>([]);
+
+  useEffect(() => {
+    if (loading) return;
+    let cancelled = false;
+    activeGames()
+      .then((res) => !cancelled && setOngoing(res.games))
+      .catch(() => !cancelled && setOngoing([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, user]);
 
   async function handleCreate(e: FormEvent): Promise<void> {
     e.preventDefault();
@@ -66,6 +80,23 @@ export function HomePage() {
           </div>
         )}
       </header>
+
+      {ongoing.length > 0 && (
+        <section className="card">
+          <h2>{ongoing.length > 1 ? 'Tes parties en cours' : 'Ta partie en cours'}</h2>
+          <ul className="history-list">
+            {ongoing.map((game) => (
+              <li key={game.id} className="history-list__item">
+                <Link to={`/game/${game.id}`} className="button--primary ongoing__link">
+                  Rejoindre la partie
+                </Link>{' '}
+                {game.status === 'WAITING' ? 'en attente de joueurs' : 'en cours'} —{' '}
+                {game.players.map((p) => (p.isYou ? `${p.pseudo} (toi)` : p.pseudo)).join(', ')}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="card">
         <h2>Créer une nouvelle partie</h2>
