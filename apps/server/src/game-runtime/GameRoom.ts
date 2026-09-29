@@ -16,7 +16,7 @@ import {
   type PlayerPublicState,
 } from '@scrabble/shared';
 import { HttpError } from '../errors.js';
-import { loadGameForRuntime, persistGameStart, persistMove, setPlayerConnected } from '../services/persistence.service.js';
+import { loadGameForRuntime, persistGameClosed, persistGameStart, persistMove, setPlayerConnected } from '../services/persistence.service.js';
 import type { IOServer, IOSocket } from '../sockets/types.js';
 
 export interface GamePlayerMeta {
@@ -199,6 +199,23 @@ export class GameRoom {
       this.io.to(this.roomName).emit('game:started', { turnDeadline: this.state.turnDeadline });
       this.broadcastPersonalizedState();
       return this.buildStatePayload(requesterGamePlayerId);
+    });
+  }
+
+  /**
+   * Clôture manuelle (créateur) : stoppe le timer, passe la partie en FINISHED et prévient les
+   * clients connectés via un nouvel état. Passe par la file pour ne pas croiser un coup en cours.
+   */
+  async close(): Promise<void> {
+    await this.enqueue(async () => {
+      if (this.state.status === 'FINISHED') return;
+      if (this.turnTimer) {
+        clearTimeout(this.turnTimer);
+        this.turnTimer = null;
+      }
+      this.state = { ...this.state, status: 'FINISHED', turnDeadline: null };
+      await persistGameClosed(this.gameId);
+      this.broadcastPersonalizedState();
     });
   }
 

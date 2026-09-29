@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { Server as SocketIOServer } from 'socket.io';
 import { env } from './config/env.js';
 import { GameRoomManager } from './game-runtime/GameRoomManager.js';
+import { setGameRoomManager } from './game-runtime/registry.js';
 import { registerSocketAuth } from './sockets/authMiddleware.js';
 import { registerGameHandlers } from './sockets/gameHandlers.js';
 import type { IOServer } from './sockets/types.js';
@@ -15,6 +16,7 @@ export async function attachRealtime(app: FastifyInstance): Promise<GameRoomMana
 
   registerSocketAuth(io);
   const manager = new GameRoomManager(io, dictionaryChecker);
+  setGameRoomManager(manager);
   registerGameHandlers(io, manager);
 
   const rehydrated = await manager.rehydrateInProgressGames();

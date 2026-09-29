@@ -8,7 +8,7 @@ import {
   createGame,
   getGameDetailForUser,
   getGamePreview,
-  closeWaitingGame,
+  closeGame,
   joinGame,
   listActiveGames,
   listMyGames,
@@ -90,7 +90,7 @@ export async function gamesRoutes(app: FastifyInstance): Promise<void> {
   app.post('/:id/close', async (request, reply) => {
     const { userId } = requireUser(request);
     const { id } = request.params as { id: string };
-    await closeWaitingGame(id, userId);
+    await closeGame(id, userId);
     return reply.code(204).send();
   });
 

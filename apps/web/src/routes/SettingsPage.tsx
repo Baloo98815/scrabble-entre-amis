@@ -40,7 +40,7 @@ export function SettingsPage() {
         {theme !== 'custom' && (
           <p>
             <button type="button" onClick={enableCustom}>
-              Activer le thème personnalisé
+              Enregistrer et Activer le thème personnalisé
             </button>
           </p>
         )}

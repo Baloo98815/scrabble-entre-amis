@@ -21,6 +21,11 @@ export async function loadGameForRuntime(gameId: string) {
   return game;
 }
 
+/** Marque la partie comme terminée sans coup (clôture manuelle par le créateur). */
+export async function persistGameClosed(gameId: string): Promise<void> {
+  await prisma.game.update({ where: { id: gameId }, data: { status: 'FINISHED', finishedAt: new Date() } });
+}
+
 /** Persiste la mise en route de la partie (distribution des chevalets, sac initial). */
 export async function persistGameStart(state: GameState): Promise<void> {
   await prisma.$transaction([

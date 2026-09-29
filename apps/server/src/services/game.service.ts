@@ -2,6 +2,8 @@ import type { CreateGameInput, GamePlayerSummary, GameSummary } from '@scrabble/
 import type { Game, GamePlayer, User } from '@prisma/client';
 import { prisma } from '../db/prisma.js';
 import { HttpError } from '../errors.js';
+import { getGameRoomManager } from '../game-runtime/registry.js';
+import { persistGameClosed } from './persistence.service.js';
 
 /** Qui regarde/agit - juste de quoi identifier "est-ce moi ?" parmi les joueurs d'une partie. */
 export type Viewer = { kind: 'user'; userId: string } | { kind: 'guest'; guestId: string } | null;
@@ -119,10 +121,12 @@ export async function listMyGames(userId: string): Promise<GameSummary[]> {
 }
 
 /**
- * Clôture une partie qui n'a jamais démarré (statut WAITING → FINISHED), pour qu'elle ne soit plus
- * proposée comme « partie en cours ». Réservé au créateur ; sans effet sur une partie déjà terminée.
+ * Clôture une partie en attente ou en cours (→ FINISHED) pour qu'elle ne soit plus proposée comme
+ * « partie en cours ». Réservé au créateur ; sans effet sur une partie déjà terminée. Si la partie
+ * est chargée en mémoire, c'est la `GameRoom` qui la clôt (timer, clients, base) pour éviter qu'un
+ * coup ou le timer n'écrase le statut.
  */
-export async function closeWaitingGame(gameId: string, userId: string): Promise<void> {
+export async function closeGame(gameId: string, userId: string): Promise<void> {
   const game = await prisma.game.findUnique({
     where: { id: gameId },
     select: { status: true, players: { select: { userId: true, seat: true } } },
@@ -131,14 +135,16 @@ export async function closeWaitingGame(gameId: string, userId: string): Promise<
   if (!game || !me) {
     throw new HttpError(404, 'GAME_NOT_FOUND', 'Partie introuvable.');
   }
-  if (game.status === 'FINISHED') return;
-  if (game.status !== 'WAITING') {
-    throw new HttpError(409, 'GAME_NOT_CLOSABLE', 'Seule une partie non démarrée peut être clôturée.');
-  }
+  if (game.status === 'FINISHED' || game.status === 'ABANDONED') return;
   if (me.seat !== 0) {
     throw new HttpError(403, 'FORBIDDEN', 'Seul le créateur de la partie peut la clôturer.');
   }
-  await prisma.game.update({ where: { id: gameId }, data: { status: 'FINISHED', finishedAt: new Date() } });
+  const room = getGameRoomManager()?.get(gameId);
+  if (room) {
+    await room.close();
+  } else {
+    await persistGameClosed(gameId);
+  }
 }
 
 /** Parties non terminées (en attente ou en cours) où cette identité - compte ou invité - est joueur. */

@@ -194,7 +194,7 @@ describe('games routes', () => {
       expect(response.statusCode).toBe(403);
     });
 
-    it('closes a never-started game as FINISHED, so it is no longer listed as active', async () => {
+    it('closes a waiting game as FINISHED, so it is no longer listed as active', async () => {
       const response = await app.inject({
         method: 'POST',
         url: `/api/games/${ownedGameId}/close`,
@@ -206,6 +206,42 @@ describe('games routes', () => {
       expect(stored?.status).toBe('FINISHED');
       const active = await app.inject({ method: 'GET', url: '/api/games/active', headers: { cookie: sessionCookie } });
       expect(active.json().games.map((g: { id: string }) => g.id)).not.toContain(ownedGameId);
+    });
+
+    it('also closes an in-progress game, but only for its creator', async () => {
+      const createResponse = await app.inject({
+        method: 'POST',
+        url: '/api/games',
+        payload: { maxPlayers: 2 },
+        headers: { cookie: sessionCookie },
+      });
+      const game = createResponse.json().game;
+      createdGameIds.push(game.id);
+      await prisma.game.update({ where: { id: game.id }, data: { status: 'IN_PROGRESS' } });
+
+      const otherEmail = `games-test-close-${randomUUID()}@example.com`;
+      createdEmails.push(otherEmail);
+      const otherRegister = await app.inject({
+        method: 'POST',
+        url: '/api/auth/register',
+        payload: { email: otherEmail, password: 'motdepasse123', pseudo: 'Autre' },
+      });
+      const otherCookie = cookieHeader(otherRegister, SESSION_COOKIE_NAME);
+      const forbidden = await app.inject({
+        method: 'POST',
+        url: `/api/games/${game.id}/close`,
+        headers: { cookie: otherCookie },
+      });
+      expect(forbidden.statusCode).toBe(404); // pas joueur de cette partie
+
+      const response = await app.inject({
+        method: 'POST',
+        url: `/api/games/${game.id}/close`,
+        headers: { cookie: sessionCookie },
+      });
+      expect(response.statusCode).toBe(204);
+      const stored = await prisma.game.findUnique({ where: { id: game.id } });
+      expect(stored?.status).toBe('FINISHED');
     });
   });
 });

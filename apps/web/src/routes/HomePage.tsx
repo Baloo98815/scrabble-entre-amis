@@ -4,6 +4,7 @@ import type { GameSummary } from '@scrabble/shared';
 import { activeGames, createGame } from '../api/games.js';
 import { ApiError } from '../api/http.js';
 import { logout } from '../api/auth.js';
+import { CloseGameButton, canCloseGame } from '../components/game/CloseGameButton.js';
 import { DictionaryAdminForm } from '../components/admin/DictionaryAdminForm.js';
 import { useAuthContext } from '../state/AuthContext.js';
 import { getRememberedPseudo, rememberPseudo } from '../utils/guestPseudo.js';
@@ -91,7 +92,10 @@ export function HomePage() {
                   Rejoindre la partie
                 </Link>{' '}
                 {game.status === 'WAITING' ? 'en attente de joueurs' : 'en cours'} -{' '}
-                {game.players.map((p) => (p.isYou ? `${p.pseudo} (toi)` : p.pseudo)).join(', ')}
+                {game.players.map((p) => (p.isYou ? `${p.pseudo} (toi)` : p.pseudo)).join(', ')}{' '}
+                {canCloseGame(game) && (
+                  <CloseGameButton game={game} onClosed={() => setOngoing((c) => c.filter((g) => g.id !== game.id))} />
+                )}
               </li>
             ))}
           </ul>
