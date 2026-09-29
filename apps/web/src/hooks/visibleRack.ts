@@ -9,7 +9,7 @@ export interface RackSlot {
 /**
  * Emplacements du chevalet pas encore consommés par les placements en attente ce tour-ci.
  * Une lettre déjà posée sur le plateau (clavier ou glisser-déposer) ne doit plus apparaître
- * dans le chevalet — sans quoi elle pourrait être posée une seconde fois par erreur alors
+ * dans le chevalet - sans quoi elle pourrait être posée une seconde fois par erreur alors
  * qu'un seul exemplaire n'existe réellement dans la main du joueur.
  */
 export function computeVisibleRack(rack: Letter[], pending: Placement[]): RackSlot[] {

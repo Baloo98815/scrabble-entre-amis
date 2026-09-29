@@ -90,12 +90,17 @@ export class GameRoom {
 
   /**
    * Tant que la partie est WAITING, de nouveaux joueurs peuvent avoir rejoint via REST
-   * depuis que cette instance a été chargée/mise en cache — on rafraîchit le roster
+   * depuis que cette instance a été chargée/mise en cache - on rafraîchit le roster
    * depuis la DB avant de vérifier qu'un joueur en fait partie.
    */
   private async syncWaitingPlayers(): Promise<void> {
     if (this.state.status !== 'WAITING') return;
     const game = await loadGameForRuntime(this.gameId);
+    // Partie clôturée via REST (WAITING → FINISHED) depuis que cette instance a été mise en cache.
+    if (game.status === 'FINISHED') {
+      this.state = { ...this.state, status: 'FINISHED' };
+      return;
+    }
     const players = game.players.map((p) => ({
       gamePlayerId: p.id,
       seat: p.seat,
@@ -136,7 +141,7 @@ export class GameRoom {
   /**
    * Attache un socket en lecture seule (mode spectateur) : rejoint la room pour recevoir le
    * plateau et les diffusions en direct (move:applied, game:started, game:ended), sans être
-   * ajouté à `this.sockets` — donc invisible du roster de connexion des joueurs, et surtout
+   * ajouté à `this.sockets` - donc invisible du roster de connexion des joueurs, et surtout
    * sans gamePlayerId associé côté handlers socket, ce qui bloque naturellement toute
    * tentative de move:place/exchange/pass/game:start (déjà gardés par `NOT_JOINED`).
    */
@@ -169,6 +174,7 @@ export class GameRoom {
 
   async start(requesterGamePlayerId: string): Promise<GameStatePayload> {
     return this.enqueue(async () => {
+      await this.syncWaitingPlayers();
       if (this.state.status !== 'WAITING') {
         throw new HttpError(409, 'GAME_ALREADY_STARTED', 'Cette partie a déjà démarré.');
       }
@@ -260,7 +266,7 @@ export class GameRoom {
     try {
       await this.enqueue(() => this.applyMove(current.gamePlayerId, (state) => applyPass(state, 'timeout')));
     } catch {
-      // Le tour a pu changer entre-temps (coup joué juste avant l'expiration) — sans effet.
+      // Le tour a pu changer entre-temps (coup joué juste avant l'expiration) - sans effet.
     }
   }
 

@@ -87,7 +87,7 @@ describe('GameRoom', () => {
     const aliceId = game.players[0]!.id;
 
     const { io } = stubIO();
-    // Charge la partie (roster : Alice seule) — comme le ferait GameRoomManager au 1er join,
+    // Charge la partie (roster : Alice seule) - comme le ferait GameRoomManager au 1er join,
     // puis la garde en cache pour tous les joins suivants.
     const room = await GameRoom.load(io, acceptAllDictionary, game.id);
     await room.attachSocket(stubSocket(), aliceId);

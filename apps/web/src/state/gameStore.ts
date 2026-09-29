@@ -6,10 +6,10 @@ const MAX_HISTORY = 20;
 
 /**
  * Le serveur ne renvoie pas l'historique des coups dans GameStatePayload (seulement l'état
- * courant) — sans ça, "Derniers mots joués" repart à vide à chaque rechargement de page en
+ * courant) - sans ça, "Derniers mots joués" repart à vide à chaque rechargement de page en
  * cours de partie. On comble ce manque côté client en gardant une copie en localStorage,
  * par partie. Best-effort : localStorage peut être indisponible (navigation privée) ou
- * contenir des données invalides — dans ce cas on dégrade silencieusement plutôt que de
+ * contenir des données invalides - dans ce cas on dégrade silencieusement plutôt que de
  * planter l'affichage.
  */
 function historyStorageKey(gameId: string): string {
@@ -87,7 +87,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       turnDeadline: payload.turnDeadline,
       yourRack: payload.yourRack,
       // Préremplit depuis localStorage seulement si on n'a pas déjà un historique en
-      // mémoire pour cette partie (ex: reconnexion pendant la même session) — sans quoi une
+      // mémoire pour cette partie (ex: reconnexion pendant la même session) - sans quoi une
       // resynchronisation en cours de partie effacerait des coups déjà affichés.
       moveHistory: state.moveHistory.length > 0 ? state.moveHistory : loadHistoryFromStorage(payload.gameId),
     })),

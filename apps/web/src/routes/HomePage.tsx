@@ -90,7 +90,7 @@ export function HomePage() {
                 <Link to={`/game/${game.id}`} className="button--primary ongoing__link">
                   Rejoindre la partie
                 </Link>{' '}
-                {game.status === 'WAITING' ? 'en attente de joueurs' : 'en cours'} —{' '}
+                {game.status === 'WAITING' ? 'en attente de joueurs' : 'en cours'} -{' '}
                 {game.players.map((p) => (p.isYou ? `${p.pseudo} (toi)` : p.pseudo)).join(', ')}
               </li>
             ))}

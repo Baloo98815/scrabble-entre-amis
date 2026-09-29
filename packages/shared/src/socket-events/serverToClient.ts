@@ -9,7 +9,7 @@ export interface ServerToClientEvents {
   'game:playerReconnected': (payload: { gamePlayerId: string }) => void;
   'game:started': (payload: { turnDeadline: number | null }) => void;
   'move:applied': (payload: MoveAppliedPayload) => void;
-  /** Émis uniquement au socket du joueur concerné — jamais en broadcast de room. */
+  /** Émis uniquement au socket du joueur concerné - jamais en broadcast de room. */
   'rack:update': (payload: { rack: Letter[] }) => void;
   'game:ended': (payload: GameEndedPayload) => void;
   error: (payload: { code: string; message: string }) => void;

@@ -61,7 +61,7 @@ describe('scoreWord', () => {
   });
 });
 
-describe('scoreMove — bonus bingo', () => {
+describe('scoreMove - bonus bingo', () => {
   const dummyWord: ExtractedWord = {
     word: 'AB',
     cells: [cell({ row: 0, col: 1, letter: 'A', isNew: true }), cell({ row: 0, col: 2, letter: 'B', isNew: true })],

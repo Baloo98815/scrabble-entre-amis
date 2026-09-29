@@ -5,6 +5,7 @@ import { previewGame } from '../api/games.js';
 import { ApiError } from '../api/http.js';
 import { GameBoard } from '../components/board/GameBoard.js';
 import { PlayerList } from '../components/players/PlayerList.js';
+import { BagContents } from '../components/game/BagContents.js';
 import { MoveHistory } from '../components/history/MoveHistory.js';
 import { ConnectionBanner } from '../components/game/ConnectionBanner.js';
 import { useSpectateConnection } from '../hooks/useSpectateConnection.js';
@@ -46,10 +47,11 @@ export function SpectatePage() {
     <div className="page game-page">
       <aside className="game-page__sidebar">
         <ConnectionBanner connected={connected} />
-        <p className="page__hint">Mode spectateur — lecture seule.</p>
+        <p className="page__hint">Mode spectateur - lecture seule.</p>
         <PlayerList players={store.players} currentTurnIndex={store.currentTurnIndex} showRackCount />
         <h2>Derniers mots joués</h2>
         <MoveHistory entries={store.moveHistory} />
+        <BagContents bagCount={store.bagCount} board={store.board} ownRack={[]} />
       </aside>
 
       <main className="game-page__main">

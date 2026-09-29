@@ -7,7 +7,7 @@ export const BINGO_TILE_COUNT = 7;
 
 /**
  * Score d'un mot formé : les multiplicateurs de case (lettre et mot) ne s'appliquent
- * qu'aux tuiles posées CE tour-ci — une case bonus déjà "consommée" à un tour précédent
+ * qu'aux tuiles posées CE tour-ci - une case bonus déjà "consommée" à un tour précédent
  * ne compte plus.
  */
 export function scoreWord(word: ExtractedWord): number {

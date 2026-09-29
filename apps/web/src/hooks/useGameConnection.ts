@@ -68,7 +68,7 @@ export function useGameConnection(gameId: string | null): {
     }
     // Filet de sécurité : un payload inattendu qui ferait planter un handler ne doit jamais
     // laisser le client figé sur un état obsolète (ex. plus interactif après avoir validé un
-    // coup, jusqu'à un rechargement manuel) — on logue l'erreur (pour enfin capter le
+    // coup, jusqu'à un rechargement manuel) - on logue l'erreur (pour enfin capter le
     // message exact si ça se reproduit) et on force une resynchronisation complète.
     function safely(label: string, fn: () => void): void {
       try {

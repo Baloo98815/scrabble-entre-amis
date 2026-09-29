@@ -11,7 +11,7 @@ interface ErrorBoundaryState {
 /**
  * Filet de sécurité global : si un rendu plante (ex. payload temps réel inattendu qui a
  * échappé aux garde-fous de useGameConnection), on affiche un message clair avec un bouton
- * de rechargement au lieu d'un écran figé sans explication — et on logue la stack complète
+ * de rechargement au lieu d'un écran figé sans explication - et on logue la stack complète
  * pour pouvoir diagnostiquer si ça se reproduit.
  */
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {

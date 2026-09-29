@@ -14,7 +14,7 @@ interface RackProps {
   onShuffle: () => void;
 }
 
-/** Le chevalet reste manipulable (réorganiser, mélanger) même hors de son tour — seule la
+/** Le chevalet reste manipulable (réorganiser, mélanger) même hors de son tour - seule la
  * pose sur le plateau est réservée à son tour (cf. Tile.tsx). */
 export function Rack({ slots, onShuffle }: RackProps) {
   const ids = slots.map(({ index }) => `rack-${index}`);

@@ -17,7 +17,7 @@ interface ErrorBody {
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   // Ne poser Content-Type: application/json que s'il y a réellement un corps JSON à envoyer
-  // — sinon Fastify rejette la requête (POST/DELETE sans body) avec
+  // - sinon Fastify rejette la requête (POST/DELETE sans body) avec
   // FST_ERR_CTP_EMPTY_JSON_BODY ("Body cannot be empty when content-type is set to
   // 'application/json'"), qui remonte en 500 générique côté client. Affectait en silence
   // toute requête sans body (ex: la déconnexion).

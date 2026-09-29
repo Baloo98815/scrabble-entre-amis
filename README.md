@@ -6,11 +6,11 @@ mode invité, plusieurs parties simultanées via lien d'invitation, respect des 
 
 ## Structure du monorepo
 
-- `packages/shared` — moteur de règles pur (aucune dépendance réseau) + types/DTO partagés entre
+- `packages/shared` - moteur de règles pur (aucune dépendance réseau) + types/DTO partagés entre
   le client et le serveur.
-- `apps/server` — API REST (Fastify) + temps réel (Socket.IO) + persistance (PostgreSQL/Prisma).
-- `apps/web` — client React/Vite.
-- `infra` — Docker Compose, configuration Nginx + Certbot pour le déploiement sur le VPS.
+- `apps/server` - API REST (Fastify) + temps réel (Socket.IO) + persistance (PostgreSQL/Prisma).
+- `apps/web` - client React/Vite.
+- `infra` - Docker Compose, configuration Nginx + Certbot pour le déploiement sur le VPS.
 
 Voir le plan complet du projet pour le détail de l'architecture, la roadmap par jalons et la
 stratégie de tests.
@@ -66,7 +66,7 @@ démarre le renouvellement automatique.
 
 **Une seule fois, après le tout premier déploiement**, peupler le dictionnaire (le conteneur
 applique les migrations mais ne seede pas). Les données Postgres vivant dans un volume Docker
-persistant, ce seed n'est à refaire ni aux redéploiements suivants ni aux `git pull` — sauf si
+persistant, ce seed n'est à refaire ni aux redéploiements suivants ni aux `git pull` - sauf si
 le volume est détruit :
 
 ```bash
@@ -84,4 +84,4 @@ git pull
 ```
 
 Le mot de passe Postgres et le secret JWT doivent être générés une seule fois et ne jamais
-être committés (`infra/.env` est gitignored) — par exemple avec `openssl rand -base64 48`.
+être committés (`infra/.env` est gitignored) - par exemple avec `openssl rand -base64 48`.

@@ -15,7 +15,7 @@ export interface PlayerPublicState {
   pseudo: string;
   seat: number;
   score: number;
-  /** Nombre de lettres dans le chevalet — jamais les lettres elles-mêmes pour les autres joueurs. */
+  /** Nombre de lettres dans le chevalet - jamais les lettres elles-mêmes pour les autres joueurs. */
   rackCount: number;
   connected: boolean;
   isYou: boolean;
@@ -37,7 +37,7 @@ export interface GameStatePayload {
   yourRack: Letter[];
 }
 
-/** Diffusé à toute la room après un coup — ne contient jamais les lettres des autres joueurs. */
+/** Diffusé à toute la room après un coup - ne contient jamais les lettres des autres joueurs. */
 export interface MoveAppliedPayload {
   move: MoveResult;
   /** Plateau à jour (les cases sont publiques par nature, contrairement aux chevalets). */

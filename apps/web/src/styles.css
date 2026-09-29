@@ -801,3 +801,55 @@ button:disabled {
 .move-history__words a:hover {
   color: var(--accent-dark);
 }
+
+.history-list__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.history-list__remove {
+  padding: 0 0.45rem;
+  line-height: 1.4;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.history-list__remove:hover {
+  color: var(--error);
+  border-color: var(--error);
+}
+
+/* Contenu du sac */
+.bag-contents {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.bag-contents__total {
+  margin: 0;
+}
+.bag-contents__grid {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(2.6rem, 1fr));
+  gap: 0.3rem;
+}
+.bag-contents__cell {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0.15rem 0.4rem;
+  background: var(--tile-bg);
+  border: 1px solid var(--tile-border);
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+.bag-contents__cell--empty {
+  opacity: 0.35;
+  text-decoration: line-through;
+}
+.bag-contents__letter {
+  font-weight: 700;
+}

@@ -6,6 +6,7 @@ import type { Letter } from '@scrabble/shared';
 import { GameBoard } from '../components/board/GameBoard.js';
 import { Rack } from '../components/rack/Rack.js';
 import { PlayerList } from '../components/players/PlayerList.js';
+import { BagContents } from '../components/game/BagContents.js';
 import { MoveHistory } from '../components/history/MoveHistory.js';
 import { WordChecker } from '../components/game/WordChecker.js';
 import { BlankLetterModal } from '../components/game/BlankLetterModal.js';
@@ -39,7 +40,7 @@ export function GamePage() {
   useEffect(() => {
     setRackOrder(store.yourRack);
     // Ne resynchronise l'ordre d'affichage que lorsque le CONTENU du chevalet change
-    // (après un coup) — un simple shuffle local ne doit pas être écrasé entre-temps.
+    // (après un coup) - un simple shuffle local ne doit pas être écrasé entre-temps.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rackKey]);
 
@@ -74,7 +75,7 @@ export function GamePage() {
       if (!source) return;
 
       // Réorganiser son chevalet (y compris hors de son tour) n'a aucune incidence sur la
-      // partie — seule la pose sur le plateau doit attendre son tour.
+      // partie - seule la pose sur le plateau doit attendre son tour.
       const boardTarget = over.data.current as { row: number; col: number } | undefined;
       if (boardTarget && typeof boardTarget.row === 'number') {
         if (!canPlace) return;
@@ -210,7 +211,7 @@ export function GamePage() {
         <ol className="final-scores">
           {ranked.map((p) => (
             <li key={p.gamePlayerId}>
-              {p.pseudo} — {p.score} pts
+              {p.pseudo} - {p.score} pts
             </li>
           ))}
         </ol>
@@ -241,6 +242,7 @@ export function GamePage() {
         <WordChecker />
         <h2>Derniers mots joués</h2>
         <MoveHistory entries={store.moveHistory} />
+        <BagContents bagCount={store.bagCount} board={store.board} ownRack={store.yourRack} />
       </aside>
 
       <main className="game-page__main">

@@ -7,7 +7,7 @@ import type { ConnectionError } from './useGameConnection.js';
 /**
  * Connexion en lecture seule à une partie (mode spectateur) : rejoint via `game:spectate`
  * (pas `game:join`), alimente le même store que la vue joueur, mais n'expose aucune action
- * de jeu — un spectateur ne peut par construction jamais émettre move:place/exchange/pass.
+ * de jeu - un spectateur ne peut par construction jamais émettre move:place/exchange/pass.
  */
 export function useSpectateConnection(gameId: string | null): {
   connected: boolean;
@@ -73,7 +73,7 @@ export function useSpectateConnection(gameId: string | null): {
     }
 
     // Même filet de sécurité que useGameConnection contre une connexion silencieusement
-    // morte (onglet resté en arrière-plan, etc.) — resynchronise dès que l'onglet redevient
+    // morte (onglet resté en arrière-plan, etc.) - resynchronise dès que l'onglet redevient
     // visible plutôt que d'attendre le ping-timeout interne de Socket.IO.
     function resyncNow(): void {
       if (document.visibilityState !== 'visible') return;

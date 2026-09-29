@@ -52,7 +52,7 @@ export function useKeyboardPlacement(board: Board | null, rack: Letter[], enable
 
   /**
    * Emplacements du chevalet pas encore consommés par les placements en attente. C'est
-   * cette liste — pas `rack` brut — qui doit être affichée : sans ça, une lettre déjà
+   * cette liste - pas `rack` brut - qui doit être affichée : sans ça, une lettre déjà
    * glissée sur le plateau resterait visible et pourrait être reposée une 2e fois alors
    * qu'un seul exemplaire n'existe réellement dans la main du joueur.
    */
@@ -76,7 +76,7 @@ export function useKeyboardPlacement(board: Board | null, rack: Letter[], enable
     (row: number, col: number, letter: string, isBlank: boolean) => {
       if (!enabled) return;
       // Défense en profondeur : le chevalet affiché exclut déjà les lettres consommées,
-      // donc un glisser-déposer ne devrait jamais viser une lettre indisponible — mais on
+      // donc un glisser-déposer ne devrait jamais viser une lettre indisponible - mais on
       // vérifie quand même pour ne jamais construire un coup que le serveur rejetterait.
       const stillAvailable = remainingRack.includes(isBlank ? '*' : letter.toUpperCase());
       if (!stillAvailable) return;

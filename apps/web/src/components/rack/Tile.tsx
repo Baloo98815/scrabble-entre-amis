@@ -5,14 +5,14 @@ import type { CSSProperties } from 'react';
 
 interface TileProps {
   id: string;
-  /** Position dans le chevalet complet (rackOrder) — utilisée pour le drop sur le plateau
+  /** Position dans le chevalet complet (rackOrder) - utilisée pour le drop sur le plateau
    * (via `letter`) et pour la réorganisation par glisser-déposer au sein du chevalet. */
   index: number;
   letter: string;
 }
 
 /**
- * Toujours réordonnable, même hors de son tour — seul le dépôt sur le plateau est bloqué
+ * Toujours réordonnable, même hors de son tour - seul le dépôt sur le plateau est bloqué
  * (par le drop cible en lecture seule côté Cell.tsx + le garde-fou dans handleDragEnd),
  * pas la manipulation du chevalet lui-même. Réorganiser sa main en attendant son tour n'a
  * aucune incidence sur la partie.

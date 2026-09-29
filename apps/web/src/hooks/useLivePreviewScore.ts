@@ -4,7 +4,7 @@ import type { Board, Placement } from '@scrabble/shared';
 
 /**
  * Aperçu du score que rapporterait le coup en cours de préparation, calculé avec les mêmes
- * fonctions pures que le serveur (extractWordsFormed/scoreMove) — pas de duplication de la
+ * fonctions pures que le serveur (extractWordsFormed/scoreMove) - pas de duplication de la
  * logique de score, juste anticipée côté client avant validation. Le placement en cours de
  * saisie peut être géométriquement incomplet (lettres pas encore alignées) : dans ce cas on
  * masque simplement l'aperçu plutôt que d'afficher un chiffre trompeur.

@@ -22,6 +22,11 @@ export function activeGames(): Promise<{ games: GameSummary[] }> {
   return api.get<{ games: GameSummary[] }>('/games/active');
 }
 
+/** Clôture une partie non démarrée (WAITING → FINISHED), réservé au créateur. */
+export function closeGame(gameId: string): Promise<void> {
+  return api.post<void>(`/games/${gameId}/close`);
+}
+
 export interface MoveHistoryRow {
   id: string;
   gamePlayerId: string;

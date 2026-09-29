@@ -5,7 +5,7 @@ export type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
 let socket: GameSocket | null = null;
 
-/** Connexion unique et partagée — même origine que la page (proxy Vite en dev, Nginx en prod). */
+/** Connexion unique et partagée - même origine que la page (proxy Vite en dev, Nginx en prod). */
 export function getSocket(): GameSocket {
   if (!socket) {
     socket = io({ withCredentials: true, autoConnect: false });

@@ -10,7 +10,7 @@ const LABELS = {
 export function ThemeToggle() {
   const { theme, cycleTheme } = useThemeContext();
   const { icon, current, next } = LABELS[theme];
-  const label = `Thème ${current} — passer au thème ${next}`;
+  const label = `Thème ${current} - passer au thème ${next}`;
   return (
     <button type="button" className="theme-toggle" onClick={cycleTheme} aria-label={label} title={label}>
       {icon}

@@ -5,7 +5,7 @@ import { prisma } from '../../src/db/prisma.js';
 import { extractWordsFromTsv } from './normalize.js';
 
 // Source du seed initial du dictionnaire principal (mots ODS, un par ligne). Ce fichier n'est
-// lu QUE par ce script — au runtime, la source unique est la table `dictionary_words`.
+// lu QUE par ce script - au runtime, la source unique est la table `dictionary_words`.
 const DEFAULT_SOURCE_PATH = fileURLToPath(new URL('../../data/ods-fr.txt', import.meta.url));
 
 // Postgres limite le nombre de paramètres d'une requête ; on insère par lots pour rester

@@ -2,7 +2,7 @@ import { normalizeWord } from './normalizeWord.js';
 
 /**
  * Interface implémentée côté serveur (table `dictionary_words`, chargée en cache mémoire au
- * démarrage). Le moteur de règles ne connaît que cette interface — aucune dépendance à une
+ * démarrage). Le moteur de règles ne connaît que cette interface - aucune dépendance à une
  * base de données ou à un fichier particulier.
  */
 export interface DictionaryChecker {

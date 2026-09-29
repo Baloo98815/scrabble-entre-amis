@@ -49,7 +49,7 @@ export function DictionaryAdminForm() {
 
   return (
     <section className="card">
-      <h2>Administration — Dictionnaire</h2>
+      <h2>Administration - Dictionnaire</h2>
       <form className="form" onSubmit={handleAdd}>
         <label>
           Mot

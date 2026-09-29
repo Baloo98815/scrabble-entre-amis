@@ -193,5 +193,19 @@ describe('games routes', () => {
       });
       expect(response.statusCode).toBe(403);
     });
+
+    it('closes a never-started game as FINISHED, so it is no longer listed as active', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/api/games/${ownedGameId}/close`,
+        headers: { cookie: sessionCookie },
+      });
+      expect(response.statusCode).toBe(204);
+
+      const stored = await prisma.game.findUnique({ where: { id: ownedGameId } });
+      expect(stored?.status).toBe('FINISHED');
+      const active = await app.inject({ method: 'GET', url: '/api/games/active', headers: { cookie: sessionCookie } });
+      expect(active.json().games.map((g: { id: string }) => g.id)).not.toContain(ownedGameId);
+    });
   });
 });

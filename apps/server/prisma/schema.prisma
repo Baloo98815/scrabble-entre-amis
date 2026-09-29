@@ -110,7 +110,7 @@ model Move {
   /// Chevalet du joueur après application du coup (Letter[]).
   rackAfter   Json
 
-  /// 'player' | 'timeout' — permet de distinguer un passe automatique par timeout.
+  /// 'player' | 'timeout' - permet de distinguer un passe automatique par timeout.
   triggeredBy String @default("player")
 
   createdAt DateTime @default(now())

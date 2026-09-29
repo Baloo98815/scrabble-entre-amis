@@ -3,7 +3,7 @@ import type { Game, GamePlayer, User } from '@prisma/client';
 import { prisma } from '../db/prisma.js';
 import { HttpError } from '../errors.js';
 
-/** Qui regarde/agit — juste de quoi identifier "est-ce moi ?" parmi les joueurs d'une partie. */
+/** Qui regarde/agit - juste de quoi identifier "est-ce moi ?" parmi les joueurs d'une partie. */
 export type Viewer = { kind: 'user'; userId: string } | { kind: 'guest'; guestId: string } | null;
 
 /** Identité complète de la personne qui crée ou rejoint une partie (avec le pseudo choisi). */
@@ -118,7 +118,30 @@ export async function listMyGames(userId: string): Promise<GameSummary[]> {
   return games.map((g) => toGameSummary(g, { kind: 'user', userId }));
 }
 
-/** Parties non terminées (en attente ou en cours) où cette identité — compte ou invité — est joueur. */
+/**
+ * Clôture une partie qui n'a jamais démarré (statut WAITING → FINISHED), pour qu'elle ne soit plus
+ * proposée comme « partie en cours ». Réservé au créateur ; sans effet sur une partie déjà terminée.
+ */
+export async function closeWaitingGame(gameId: string, userId: string): Promise<void> {
+  const game = await prisma.game.findUnique({
+    where: { id: gameId },
+    select: { status: true, players: { select: { userId: true, seat: true } } },
+  });
+  const me = game?.players.find((p) => p.userId === userId);
+  if (!game || !me) {
+    throw new HttpError(404, 'GAME_NOT_FOUND', 'Partie introuvable.');
+  }
+  if (game.status === 'FINISHED') return;
+  if (game.status !== 'WAITING') {
+    throw new HttpError(409, 'GAME_NOT_CLOSABLE', 'Seule une partie non démarrée peut être clôturée.');
+  }
+  if (me.seat !== 0) {
+    throw new HttpError(403, 'FORBIDDEN', 'Seul le créateur de la partie peut la clôturer.');
+  }
+  await prisma.game.update({ where: { id: gameId }, data: { status: 'FINISHED', finishedAt: new Date() } });
+}
+
+/** Parties non terminées (en attente ou en cours) où cette identité - compte ou invité - est joueur. */
 export async function listActiveGames(viewer: Viewer): Promise<GameSummary[]> {
   if (!viewer) return [];
   const games = await prisma.game.findMany({

@@ -13,7 +13,7 @@ let cache: Set<string> | null = null;
  * La table contient à la fois le dictionnaire principal (mots ODS, `source = 'ods'`, chargés
  * une fois via `pnpm --filter @scrabble/server run seed:dictionary`) et les ajouts « à la
  * volée » de l'admin (`source = 'admin:<userId>'`, via `addWord`/`removeWord`). Le fichier
- * `data/ods-fr.txt` n'est que la source du seed initial — il n'est plus lu au runtime.
+ * `data/ods-fr.txt` n'est que la source du seed initial - il n'est plus lu au runtime.
  */
 export async function loadDictionaryCache(): Promise<void> {
   const rows = await prisma.dictionaryWord.findMany({ select: { word: true } });
@@ -42,7 +42,7 @@ export function isValidWord(word: string): boolean {
 /** Implémentation concrète de `DictionaryChecker`, injectée dans le moteur de règles. */
 export const dictionaryChecker: DictionaryChecker = { isValidWord };
 
-/** Ajoute un mot en base (la source unique) et met à jour le cache — effet immédiat. */
+/** Ajoute un mot en base (la source unique) et met à jour le cache - effet immédiat. */
 export async function addWord(word: string, source: string): Promise<string> {
   const normalized = normalizeWord(word);
   if (!normalized) throw new HttpError(400, 'INVALID_WORD', 'Mot invalide.');
@@ -56,7 +56,7 @@ export async function addWord(word: string, source: string): Promise<string> {
 }
 
 /**
- * Retire un mot de la base et du cache — effet immédiat. La base étant désormais la source
+ * Retire un mot de la base et du cache - effet immédiat. La base étant désormais la source
  * unique, un mot retiré le reste après redémarrage (contrairement à l'ancien modèle à
  * fichiers, où seuls les ajouts « à chaud » étaient retirables). N'a aucun effet si le mot
  * n'existe pas.

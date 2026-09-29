@@ -7,7 +7,7 @@ function tile(letter: string) {
   return { letter, isBlank: false, playedBy: 'p1', turnNumber: 0 };
 }
 
-describe('validatePlacement — premier coup', () => {
+describe('validatePlacement - premier coup', () => {
   it('accepts a word covering the center cell', () => {
     const board = createEmptyBoard();
     const placements: Placement[] = [
@@ -28,7 +28,7 @@ describe('validatePlacement — premier coup', () => {
   });
 });
 
-describe('validatePlacement — coups suivants', () => {
+describe('validatePlacement - coups suivants', () => {
   function boardWithCat() {
     const empty = createEmptyBoard();
     return placeTiles(empty, [
