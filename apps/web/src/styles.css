@@ -704,3 +704,76 @@ button:disabled {
   border: 1px solid var(--border);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
+
+.nav-menu {
+  position: fixed;
+  top: 0.75rem;
+  right: 3.5rem;
+  z-index: 40;
+}
+.nav-menu__button {
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  border-radius: 50%;
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+.nav-menu__panel {
+  position: absolute;
+  top: 2.75rem;
+  right: 0;
+  min-width: 12rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+.nav-menu__panel .link-button {
+  text-align: left;
+}
+.nav-menu__user {
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings__toolbar {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 1rem 0;
+}
+.settings__group {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 0 0 1rem;
+}
+.settings__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.5rem 1rem;
+}
+.settings__color {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.settings__color input[type='color'] {
+  width: 2.5rem;
+  height: 2rem;
+  padding: 0;
+  cursor: pointer;
+}
