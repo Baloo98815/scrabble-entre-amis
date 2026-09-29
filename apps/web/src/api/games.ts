@@ -24,6 +24,7 @@ export interface MoveHistoryRow {
   type: 'PLACE' | 'EXCHANGE' | 'PASS';
   score: number;
   wordsFormed: Array<{ word: string; score: number }> | null;
+  triggeredBy: 'player' | 'timeout';
   createdAt: string;
 }
 

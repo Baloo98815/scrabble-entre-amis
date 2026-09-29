@@ -1,8 +1,49 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { GameSummary } from '@scrabble/shared';
-import { myGames } from '../api/games.js';
+import { gameDetail, myGames } from '../api/games.js';
+import { MoveHistory } from '../components/history/MoveHistory.js';
+import type { MoveHistoryEntry } from '../state/deriveMoveSummary.js';
 import { useAuthContext } from '../state/AuthContext.js';
+
+/** Coups d'une partie, chargés à la demande depuis la base (source de vérité de l'historique). */
+function GameMoves({ game }: { game: GameSummary }) {
+  const [entries, setEntries] = useState<MoveHistoryEntry[] | null>(null);
+  const [error, setError] = useState(false);
+
+  function load(open: boolean): void {
+    if (!open || entries !== null) return;
+    setError(false);
+    gameDetail(game.id)
+      .then(({ game: detail }) =>
+        setEntries(
+          detail.moves.map((m) => ({
+            turnNumber: m.turnNumber,
+            gamePlayerId: m.gamePlayerId,
+            pseudo: game.players.find((p) => p.gamePlayerId === m.gamePlayerId)?.pseudo ?? 'Joueur',
+            type: m.type,
+            words: m.wordsFormed?.map((w) => w.word) ?? [],
+            score: m.score,
+            triggeredBy: m.triggeredBy,
+          })),
+        ),
+      )
+      .catch(() => setError(true));
+  }
+
+  return (
+    <details className="history-list__moves" onToggle={(e) => load(e.currentTarget.open)}>
+      <summary>Voir les coups joués</summary>
+      {error ? (
+        <p>Impossible de charger les coups.</p>
+      ) : entries === null ? (
+        <p>Chargement…</p>
+      ) : (
+        <MoveHistory entries={entries} />
+      )}
+    </details>
+  );
+}
 
 export function HistoryPage() {
   const { user, loading: authLoading } = useAuthContext();
@@ -48,6 +89,7 @@ export function HistoryPage() {
                   </li>
                 ))}
               </ul>
+              {game.status !== 'WAITING' && <GameMoves game={game} />}
             </li>
           ))}
         </ul>

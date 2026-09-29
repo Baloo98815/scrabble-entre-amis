@@ -148,6 +148,8 @@ export async function getGameDetailForUser(gameId: string, userId: string) {
   }
   return {
     ...toGameSummary(game, { kind: 'user', userId }),
-    moves: game.moves,
+    // rackAfter reste en base (reprise/audit) mais n'est jamais exposé : il révélerait le chevalet
+    // des adversaires dans une partie en cours.
+    moves: game.moves.map(({ rackAfter: _rackAfter, ...move }) => move),
   };
 }

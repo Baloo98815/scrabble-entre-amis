@@ -777,3 +777,11 @@ button:disabled {
   padding: 0;
   cursor: pointer;
 }
+
+.history-list__moves {
+  margin-top: 0.5rem;
+}
+.history-list__moves summary {
+  cursor: pointer;
+  color: var(--accent-dark);
+}
