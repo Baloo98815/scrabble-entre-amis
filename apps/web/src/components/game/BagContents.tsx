@@ -33,7 +33,7 @@ export function BagContents({ bagCount, board, ownRack }: BagContentsProps) {
           );
         })}
       </ul>
-      <p className="page__hint">Détail : lettres non jouées, sac et chevalets adverses compris.</p>
+      <p className="page__hint">Lettres que tu n’as pas encore vues : elles peuvent être dans le sac ou sur les chevalets de tes adversaires.</p>
     </section>
   );
 }
