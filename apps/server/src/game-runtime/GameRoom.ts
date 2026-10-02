@@ -11,6 +11,7 @@ import {
   type GameStatePayload,
   type Letter,
   type MoveAppliedPayload,
+  type MoveHistoryItem,
   type MoveResult,
   type Placement,
   type PlayerPublicState,
@@ -35,6 +36,7 @@ export class GameRoom {
   private readonly sockets = new Map<string, Set<IOSocket>>(); // gamePlayerId -> sockets (multi-onglet)
   private queue: Promise<unknown> = Promise.resolve();
   private turnTimer: NodeJS.Timeout | null = null;
+  private moveHistory: MoveHistoryItem[] = [];
 
   private constructor(
     private readonly io: IOServer,
@@ -84,6 +86,14 @@ export class GameRoom {
     };
 
     const room = new GameRoom(io, dictionary, game.inviteCode, state, meta);
+    room.moveHistory = game.moves.map((m) => ({
+      turnNumber: m.turnNumber,
+      gamePlayerId: m.gamePlayerId,
+      type: m.type,
+      words: ((m.wordsFormed as Array<{ word: string }> | null) ?? []).map((w) => w.word),
+      score: m.score,
+      triggeredBy: m.triggeredBy === 'timeout' ? 'timeout' : 'player',
+    }));
     if (state.status === 'IN_PROGRESS') room.armTurnTimer();
     return room;
   }
@@ -257,6 +267,14 @@ export class GameRoom {
 
     this.state = outcome.state;
     await persistMove(this.state, gamePlayerId, outcome.result);
+    this.moveHistory.push({
+      turnNumber: outcome.result.turnNumber,
+      gamePlayerId: outcome.result.gamePlayerId,
+      type: outcome.result.type,
+      words: outcome.result.wordsFormed?.map((w) => w.word) ?? [],
+      score: outcome.result.score,
+      triggeredBy: outcome.result.triggeredBy,
+    });
     this.armTurnTimer();
 
     const payload = this.buildMoveAppliedPayload(outcome.result);
@@ -343,6 +361,7 @@ export class GameRoom {
       turnNumber: this.state.turnNumber,
       turnDeadline: this.state.turnDeadline,
       yourRack: viewer?.rack ?? [],
+      moveHistory: this.moveHistory,
     };
   }
 

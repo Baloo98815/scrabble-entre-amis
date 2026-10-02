@@ -21,6 +21,16 @@ export interface PlayerPublicState {
   isYou: boolean;
 }
 
+/** Résumé d'un coup passé, tel que persisté en base (sans lettres des chevalets). */
+export interface MoveHistoryItem {
+  turnNumber: number;
+  gamePlayerId: string;
+  type: MoveResult['type'];
+  words: string[];
+  score: number;
+  triggeredBy: 'player' | 'timeout';
+}
+
 /** Snapshot complet envoyé à UN joueur au join/reconnect (contient son propre rack). */
 export interface GameStatePayload {
   gameId: string;
@@ -35,6 +45,8 @@ export interface GameStatePayload {
   /** Epoch ms, `null` si pas de timeout configuré pour cette partie. */
   turnDeadline: number | null;
   yourRack: Letter[];
+  /** Historique des coups (ordre chronologique), issu de la base : identique quel que soit le navigateur. */
+  moveHistory: MoveHistoryItem[];
 }
 
 /** Diffusé à toute la room après un coup - ne contient jamais les lettres des autres joueurs. */

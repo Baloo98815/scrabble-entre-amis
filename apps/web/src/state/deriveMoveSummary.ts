@@ -1,4 +1,4 @@
-import type { MoveResult, PlayerPublicState } from '@scrabble/shared';
+import type { MoveHistoryItem, MoveResult, PlayerPublicState } from '@scrabble/shared';
 
 export interface MoveHistoryEntry {
   turnNumber: number;
@@ -11,14 +11,14 @@ export interface MoveHistoryEntry {
 }
 
 /** Traduit un `MoveResult` brut en résumé prêt à afficher dans "derniers mots joués". */
-export function deriveMoveSummary(move: MoveResult, players: PlayerPublicState[]): MoveHistoryEntry {
+export function deriveMoveSummary(move: MoveResult | MoveHistoryItem, players: PlayerPublicState[]): MoveHistoryEntry {
   const player = players.find((p) => p.gamePlayerId === move.gamePlayerId);
   return {
     turnNumber: move.turnNumber,
     gamePlayerId: move.gamePlayerId,
     pseudo: player?.pseudo ?? 'Joueur',
     type: move.type,
-    words: move.wordsFormed?.map((w) => w.word) ?? [],
+    words: 'words' in move ? move.words : (move.wordsFormed?.map((w) => w.word) ?? []),
     score: move.score,
     triggeredBy: move.triggeredBy,
   };

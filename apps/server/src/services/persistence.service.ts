@@ -13,6 +13,10 @@ export async function loadGameForRuntime(gameId: string) {
     where: { id: gameId },
     include: {
       players: { include: { user: { select: { pseudo: true } } }, orderBy: { seat: 'asc' } },
+      moves: {
+        orderBy: { turnNumber: 'asc' },
+        select: { turnNumber: true, gamePlayerId: true, type: true, wordsFormed: true, score: true, triggeredBy: true },
+      },
     },
   });
   if (!game) {
