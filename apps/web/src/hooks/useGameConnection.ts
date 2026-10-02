@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { AckResponse, GameStatePayload, Letter, MoveAppliedPayload, Placement } from '@scrabble/shared';
+import type {
+  AckResponse,
+  BullshitUpdatePayload,
+  GameStatePayload,
+  Letter,
+  MoveAppliedPayload,
+  Placement,
+  ProposalResolvedPayload,
+} from '@scrabble/shared';
 import { getSocket } from '../api/socket.js';
 import { useGameStore } from '../state/gameStore.js';
 
@@ -30,10 +38,16 @@ export function useGameConnection(gameId: string | null): {
   placeMove: (placements: Placement[]) => Promise<MoveAppliedPayload>;
   exchange: (letters: Letter[]) => Promise<MoveAppliedPayload>;
   pass: () => Promise<MoveAppliedPayload>;
+  clickBonus: () => Promise<void>;
+  proposeWord: (word: string) => Promise<void>;
+  voteWord: (proposalId: string, accept: boolean) => Promise<void>;
+  cancelProposal: () => Promise<void>;
 } {
   const applyGameState = useGameStore((s) => s.applyGameState);
   const applyMoveApplied = useGameStore((s) => s.applyMoveApplied);
   const applyRackUpdate = useGameStore((s) => s.applyRackUpdate);
+  const applyBullshitUpdate = useGameStore((s) => s.applyBullshitUpdate);
+  const applyProposalResolved = useGameStore((s) => s.applyProposalResolved);
   const setPlayerConnection = useGameStore((s) => s.setPlayerConnection);
   const reset = useGameStore((s) => s.reset);
 
@@ -88,6 +102,12 @@ export function useGameConnection(gameId: string | null): {
     function handleRackUpdate(payload: { rack: Letter[] }): void {
       safely('handleRackUpdate', () => applyRackUpdate(payload.rack));
     }
+    function handleBullshitUpdate(payload: BullshitUpdatePayload): void {
+      safely('handleBullshitUpdate', () => applyBullshitUpdate(payload));
+    }
+    function handleProposalResolved(payload: ProposalResolvedPayload): void {
+      safely('handleProposalResolved', () => applyProposalResolved(payload));
+    }
     function handlePlayerDisconnected(payload: { gamePlayerId: string }): void {
       setPlayerConnection(payload.gamePlayerId, false);
     }
@@ -100,6 +120,8 @@ export function useGameConnection(gameId: string | null): {
     socket.on('game:state', handleGameState);
     socket.on('move:applied', handleMoveApplied);
     socket.on('rack:update', handleRackUpdate);
+    socket.on('bullshit:update', handleBullshitUpdate);
+    socket.on('proposal:resolved', handleProposalResolved);
     socket.on('game:playerDisconnected', handlePlayerDisconnected);
     socket.on('game:playerReconnected', handlePlayerReconnected);
 
@@ -131,6 +153,8 @@ export function useGameConnection(gameId: string | null): {
       socket.off('game:state', handleGameState);
       socket.off('move:applied', handleMoveApplied);
       socket.off('rack:update', handleRackUpdate);
+      socket.off('bullshit:update', handleBullshitUpdate);
+      socket.off('proposal:resolved', handleProposalResolved);
       socket.off('game:playerDisconnected', handlePlayerDisconnected);
       socket.off('game:playerReconnected', handlePlayerReconnected);
       document.removeEventListener('visibilitychange', resyncNow);
@@ -139,7 +163,7 @@ export function useGameConnection(gameId: string | null): {
       if (hasJoined) socket.emit('game:leave', () => undefined);
       reset();
     };
-  }, [gameId, applyGameState, applyMoveApplied, applyRackUpdate, setPlayerConnection, reset]);
+  }, [gameId, applyGameState, applyMoveApplied, applyRackUpdate, applyBullshitUpdate, applyProposalResolved, setPlayerConnection, reset]);
 
   const start = useCallback(
     () => new Promise<GameStatePayload>((resolve, reject) => {
@@ -196,5 +220,31 @@ export function useGameConnection(gameId: string | null): {
     [],
   );
 
-  return { connected, error, start, placeMove, exchange, pass };
+  const ackVoid = useCallback(
+    (run: (cb: (res: AckResponse<null>) => void) => void) =>
+      new Promise<void>((resolve, reject) => {
+        run((res) => {
+          try {
+            unwrap(res);
+            resolve();
+          } catch (err) {
+            reject(err);
+          }
+        });
+      }),
+    [],
+  );
+
+  const clickBonus = useCallback(() => ackVoid((cb) => getSocket().emit('bonus:click', cb)), [ackVoid]);
+  const proposeWord = useCallback(
+    (word: string) => ackVoid((cb) => getSocket().emit('word:propose', { word }, cb)),
+    [ackVoid],
+  );
+  const voteWord = useCallback(
+    (proposalId: string, accept: boolean) => ackVoid((cb) => getSocket().emit('word:vote', { proposalId, accept }, cb)),
+    [ackVoid],
+  );
+  const cancelProposal = useCallback(() => ackVoid((cb) => getSocket().emit('word:cancelProposal', cb)), [ackVoid]);
+
+  return { connected, error, start, placeMove, exchange, pass, clickBonus, proposeWord, voteWord, cancelProposal };
 }

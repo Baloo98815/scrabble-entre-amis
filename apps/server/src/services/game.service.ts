@@ -42,6 +42,7 @@ function toGameSummary(game: GameWithPlayers, viewer: Viewer): GameSummary {
     id: game.id,
     inviteCode: game.inviteCode,
     status: game.status,
+    mode: game.mode,
     maxPlayers: game.maxPlayers,
     turnTimeoutSeconds: game.turnTimeoutSeconds,
     createdAt: game.createdAt.toISOString(),
@@ -52,6 +53,7 @@ function toGameSummary(game: GameWithPlayers, viewer: Viewer): GameSummary {
 export async function createGame(creator: ActingIdentity, input: CreateGameInput): Promise<GameSummary> {
   const game = await prisma.game.create({
     data: {
+      mode: input.mode,
       maxPlayers: input.maxPlayers,
       turnTimeoutSeconds: input.turnTimeoutSeconds ?? null,
       players: {

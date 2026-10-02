@@ -17,6 +17,12 @@ export type MoveExchangeInput = z.infer<typeof moveExchangeSchema>;
 export const gameJoinSchema = z.object({ gameId: z.string().min(1) });
 export type GameJoinInput = z.infer<typeof gameJoinSchema>;
 
+export const wordProposeSchema = z.object({ word: z.string().trim().min(2).max(40) });
+export type WordProposeInput = z.infer<typeof wordProposeSchema>;
+
+export const wordVoteSchema = z.object({ proposalId: z.string().min(1), accept: z.boolean() });
+export type WordVoteInput = z.infer<typeof wordVoteSchema>;
+
 export interface ClientToServerEvents {
   'game:join': (input: GameJoinInput, ack: (res: AckResponse<GameStatePayload>) => void) => void;
   /**
@@ -30,5 +36,11 @@ export interface ClientToServerEvents {
   'move:place': (input: MovePlaceInput, ack: (res: AckResponse<MoveAppliedPayload>) => void) => void;
   'move:exchange': (input: MoveExchangeInput, ack: (res: AckResponse<MoveAppliedPayload>) => void) => void;
   'move:pass': (ack: (res: AckResponse<MoveAppliedPayload>) => void) => void;
+  /** Scrabbullshit : « +1 » sur le mot du dernier coup (un clic par joueur et par mot, hors auteur). */
+  'bonus:click': (ack: (res: AckResponse<null>) => void) => void;
+  /** Scrabbullshit : le joueur au tour propose un mot absent du dictionnaire. */
+  'word:propose': (input: WordProposeInput, ack: (res: AckResponse<null>) => void) => void;
+  'word:vote': (input: WordVoteInput, ack: (res: AckResponse<null>) => void) => void;
+  'word:cancelProposal': (ack: (res: AckResponse<null>) => void) => void;
   'game:leave': (ack: (res: AckResponse<null>) => void) => void;
 }

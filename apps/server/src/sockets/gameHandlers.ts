@@ -2,6 +2,8 @@ import {
   gameJoinSchema,
   moveExchangeSchema,
   movePlaceSchema,
+  wordProposeSchema,
+  wordVoteSchema,
   type AckFailure,
   type AckResponse,
 } from '@scrabble/shared';
@@ -109,6 +111,60 @@ export function registerGameHandlers(io: IOServer, manager: GameRoomManager): vo
         const room = await manager.getOrLoad(joinedGameId);
         const payload = await room.pass(joinedGamePlayerId);
         ack(ok(payload));
+      } catch (err) {
+        ack(toAckError(err));
+      }
+    });
+
+    socket.on('bonus:click', async (ack) => {
+      try {
+        if (!joinedGameId || !joinedGamePlayerId) {
+          throw new HttpError(400, 'NOT_JOINED', "Rejoignez d'abord la partie (game:join).");
+        }
+        const room = await manager.getOrLoad(joinedGameId);
+        await room.clickBonus(joinedGamePlayerId);
+        ack(ok(null));
+      } catch (err) {
+        ack(toAckError(err));
+      }
+    });
+
+    socket.on('word:propose', async (input, ack) => {
+      try {
+        if (!joinedGameId || !joinedGamePlayerId) {
+          throw new HttpError(400, 'NOT_JOINED', "Rejoignez d'abord la partie (game:join).");
+        }
+        const { word } = wordProposeSchema.parse(input);
+        const room = await manager.getOrLoad(joinedGameId);
+        await room.proposeWord(joinedGamePlayerId, word);
+        ack(ok(null));
+      } catch (err) {
+        ack(toAckError(err));
+      }
+    });
+
+    socket.on('word:vote', async (input, ack) => {
+      try {
+        if (!joinedGameId || !joinedGamePlayerId) {
+          throw new HttpError(400, 'NOT_JOINED', "Rejoignez d'abord la partie (game:join).");
+        }
+        const { proposalId, accept } = wordVoteSchema.parse(input);
+        const room = await manager.getOrLoad(joinedGameId);
+        await room.voteWord(joinedGamePlayerId, proposalId, accept);
+        ack(ok(null));
+      } catch (err) {
+        ack(toAckError(err));
+      }
+    });
+
+    socket.on('word:cancelProposal', async (ack) => {
+      try {
+        if (!joinedGameId || !joinedGamePlayerId) {
+          throw new HttpError(400, 'NOT_JOINED', "Rejoignez d'abord la partie (game:join).");
+        }
+        const room = await manager.getOrLoad(joinedGameId);
+        await room.cancelProposal(joinedGamePlayerId);
+        ack(ok(null));
       } catch (err) {
         ack(toAckError(err));
       }

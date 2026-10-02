@@ -1,5 +1,5 @@
 import type { Letter } from '../types.js';
-import type { GameEndedPayload, GameStatePayload, MoveAppliedPayload, PlayerPublicState } from './payloads.js';
+import type { BullshitUpdatePayload, ProposalResolvedPayload, GameEndedPayload, GameStatePayload, MoveAppliedPayload, PlayerPublicState } from './payloads.js';
 
 export interface ServerToClientEvents {
   'game:state': (payload: GameStatePayload) => void;
@@ -11,6 +11,8 @@ export interface ServerToClientEvents {
   'move:applied': (payload: MoveAppliedPayload) => void;
   /** Émis uniquement au socket du joueur concerné - jamais en broadcast de room. */
   'rack:update': (payload: { rack: Letter[] }) => void;
+  'bullshit:update': (payload: BullshitUpdatePayload) => void;
+  'proposal:resolved': (payload: ProposalResolvedPayload) => void;
   'game:ended': (payload: GameEndedPayload) => void;
   error: (payload: { code: string; message: string }) => void;
 }

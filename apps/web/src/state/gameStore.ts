@@ -1,11 +1,33 @@
 import { create } from 'zustand';
-import type { Board, GameStatePayload, GameStatus, Letter, MoveAppliedPayload, PlayerPublicState } from '@scrabble/shared';
+import type {
+  Board,
+  BonusState,
+  BullshitUpdatePayload,
+  GameMode,
+  GameStatePayload,
+  GameStatus,
+  Letter,
+  MoveAppliedPayload,
+  PlayerPublicState,
+  ProposalResolvedPayload,
+  ProposalState,
+} from '@scrabble/shared';
 import { deriveMoveSummary, type MoveHistoryEntry } from './deriveMoveSummary.js';
 
 const MAX_HISTORY = 20;
 
+/** Applique les scores/connexions d'un payload diffusé (isYou y vaut toujours false) en gardant notre isYou. */
+function mergePlayers(previous: PlayerPublicState[], next: PlayerPublicState[]): PlayerPublicState[] {
+  return next.map((p) => ({ ...p, isYou: previous.find((q) => q.gamePlayerId === p.gamePlayerId)?.isYou ?? p.isYou }));
+}
+
 interface GameStoreState {
   gameId: string | null;
+  mode: GameMode;
+  bonus: BonusState | null;
+  proposal: ProposalState | null;
+  extraWords: string[];
+  proposalOutcome: ProposalResolvedPayload | null;
   inviteCode: string | null;
   status: GameStatus | 'IDLE';
   board: Board | null;
@@ -20,6 +42,9 @@ interface GameStoreState {
   applyGameState: (payload: GameStatePayload) => void;
   applyMoveApplied: (payload: MoveAppliedPayload) => void;
   applyRackUpdate: (rack: Letter[]) => void;
+  applyBullshitUpdate: (payload: BullshitUpdatePayload) => void;
+  applyProposalResolved: (payload: ProposalResolvedPayload) => void;
+  dismissProposalOutcome: () => void;
   setPlayerConnection: (gamePlayerId: string, connected: boolean) => void;
   removePlayer: (gamePlayerId: string) => void;
   reset: () => void;
@@ -27,6 +52,11 @@ interface GameStoreState {
 
 const initialState = {
   gameId: null,
+  mode: 'CLASSIC' as GameMode,
+  bonus: null as BonusState | null,
+  proposal: null as ProposalState | null,
+  extraWords: [] as string[],
+  proposalOutcome: null as ProposalResolvedPayload | null,
   inviteCode: null,
   status: 'IDLE' as GameStatus | 'IDLE',
   board: null,
@@ -45,6 +75,10 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   applyGameState: (payload) =>
     set(() => ({
       gameId: payload.gameId,
+      mode: payload.mode,
+      bonus: payload.bonus,
+      proposal: payload.proposal,
+      extraWords: payload.extraWords,
       inviteCode: payload.inviteCode,
       status: payload.status,
       board: payload.board,
@@ -67,7 +101,9 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       const moveHistory = [entry, ...state.moveHistory].slice(0, MAX_HISTORY);
       return {
         board: payload.board,
-        players: payload.players,
+        players: mergePlayers(state.players, payload.players),
+        bonus: payload.bonus,
+        proposal: null,
         currentTurnIndex: payload.nextTurnIndex,
         bagCount: payload.bagCount,
         turnDeadline: payload.turnDeadline,
@@ -78,6 +114,18 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   },
 
   applyRackUpdate: (rack) => set({ yourRack: rack }),
+
+  applyBullshitUpdate: (payload) =>
+    set((state) => ({
+      bonus: payload.bonus,
+      proposal: payload.proposal,
+      extraWords: payload.extraWords,
+      players: mergePlayers(state.players, payload.players),
+    })),
+
+  applyProposalResolved: (payload) => set({ proposalOutcome: payload }),
+
+  dismissProposalOutcome: () => set({ proposalOutcome: null }),
 
   setPlayerConnection: (gamePlayerId, connected) =>
     set((state) => ({

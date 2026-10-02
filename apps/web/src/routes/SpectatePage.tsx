@@ -50,7 +50,7 @@ export function SpectatePage() {
         <p className="page__hint">Mode spectateur - lecture seule.</p>
         <PlayerList players={store.players} currentTurnIndex={store.currentTurnIndex} showRackCount />
         <h2>Derniers mots joués</h2>
-        <MoveHistory entries={store.moveHistory} />
+        <MoveHistory entries={store.moveHistory} bonus={store.mode === 'SCRABBULLSHIT' ? store.bonus : null} />
         <BagContents bagCount={store.bagCount} board={store.board} ownRack={[]} />
       </aside>
 

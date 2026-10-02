@@ -1,11 +1,19 @@
+import { randomUUID } from 'node:crypto';
 import {
   InvalidMoveError,
+  bonusTotal,
+  normalizeWord,
   applyExchange,
   applyPass,
   applyPlaceMove,
   createEmptyBoard,
   createInitialGameState,
   type Board,
+  type BonusState,
+  type GameMode,
+  type ProposalState,
+  type BullshitUpdatePayload,
+  type WordFormed,
   type DictionaryChecker,
   type GameState,
   type GameStatePayload,
@@ -17,7 +25,15 @@ import {
   type PlayerPublicState,
 } from '@scrabble/shared';
 import { HttpError } from '../errors.js';
-import { loadGameForRuntime, persistGameClosed, persistGameStart, persistMove, setPlayerConnected } from '../services/persistence.service.js';
+import {
+  loadGameForRuntime,
+  persistExtraWords,
+  persistGameClosed,
+  persistGameStart,
+  persistMove,
+  persistPlayerScore,
+  setPlayerConnected,
+} from '../services/persistence.service.js';
 import type { IOServer, IOSocket } from '../sockets/types.js';
 
 export interface GamePlayerMeta {
@@ -37,6 +53,15 @@ export class GameRoom {
   private queue: Promise<unknown> = Promise.resolve();
   private turnTimer: NodeJS.Timeout | null = null;
   private moveHistory: MoveHistoryItem[] = [];
+  // --- Mode Scrabbullshit (inerte en Classic) ---
+  mode: GameMode = 'CLASSIC';
+  private readonly extraWords = new Set<string>();
+  private bonus: BonusState | null = null;
+  private proposal: ProposalState | null = null;
+  /** Dictionnaire effectif de la partie : dictionnaire global + mots acceptés à l'unanimité. */
+  private readonly checker: DictionaryChecker = {
+    isValidWord: (word) => this.dictionary.isValidWord(word) || this.extraWords.has(normalizeWord(word)),
+  };
 
   private constructor(
     private readonly io: IOServer,
@@ -86,6 +111,8 @@ export class GameRoom {
     };
 
     const room = new GameRoom(io, dictionary, game.inviteCode, state, meta);
+    room.mode = game.mode;
+    for (const w of game.extraWords) room.extraWords.add(w);
     room.moveHistory = game.moves.map((m) => ({
       turnNumber: m.turnNumber,
       gamePlayerId: m.gamePlayerId,
@@ -232,7 +259,7 @@ export class GameRoom {
 
   async placeMove(gamePlayerId: string, placements: Placement[]): Promise<MoveAppliedPayload> {
     return this.enqueue(() =>
-      this.applyMove(gamePlayerId, (state) => applyPlaceMove(state, placements, this.dictionary, 'player')),
+      this.applyMove(gamePlayerId, (state) => applyPlaceMove(state, placements, this.checker, 'player')),
     );
   }
 
@@ -278,6 +305,8 @@ export class GameRoom {
     });
     this.armTurnTimer();
 
+    this.cancelProposalSilently();
+    this.bonus = this.openBonus(outcome.result);
     const payload = this.buildMoveAppliedPayload(outcome.result);
     this.io.to(this.roomName).emit('move:applied', payload);
     this.sendRackUpdate(gamePlayerId);
@@ -294,6 +323,149 @@ export class GameRoom {
     }
 
     return payload;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Mode Scrabbullshit
+  // ---------------------------------------------------------------------------
+
+  private assertBullshit(): void {
+    if (this.mode !== 'SCRABBULLSHIT') {
+      throw new HttpError(400, 'WRONG_MODE', "Cette action n'existe qu'en mode Scrabbullshit.");
+    }
+    if (this.state.status !== 'IN_PROGRESS') {
+      throw new HttpError(409, 'GAME_NOT_IN_PROGRESS', "Cette partie n'est pas en cours.");
+    }
+  }
+
+  private assertPlayer(gamePlayerId: string): void {
+    if (!this.state.players.some((p) => p.gamePlayerId === gamePlayerId)) {
+      throw new HttpError(403, 'NOT_A_PLAYER', 'Les spectateurs ne peuvent pas faire cela.');
+    }
+  }
+
+  /** Mot principal d'un coup : le mieux noté, à égalité le plus long. */
+  private mainWord(words: WordFormed[]): string | null {
+    const best = [...words].sort((a, b) => b.score - a.score || b.word.length - a.word.length)[0];
+    return best?.word ?? null;
+  }
+
+  private openBonus(result: MoveResult): BonusState | null {
+    if (this.mode !== 'SCRABBULLSHIT' || result.type !== 'PLACE' || !result.wordsFormed) return null;
+    const word = this.mainWord(result.wordsFormed);
+    if (!word) return null;
+    return { turnNumber: result.turnNumber, word, authorId: result.gamePlayerId, voterIds: [] };
+  }
+
+  private cancelProposalSilently(): void {
+    if (!this.proposal) return;
+    const { id, word } = this.proposal;
+    this.proposal = null;
+    this.io.to(this.roomName).emit('proposal:resolved', { id, word, outcome: 'cancelled' });
+  }
+
+  private emitBullshitUpdate(): void {
+    const payload: BullshitUpdatePayload = {
+      bonus: this.bonus,
+      proposal: this.proposal,
+      extraWords: [...this.extraWords],
+      players: this.publicPlayers(null),
+    };
+    this.io.to(this.roomName).emit('bullshit:update', payload);
+  }
+
+  /** « +1 » sur le mot du dernier coup : 1 / 5 / 10 points au total pour l'auteur selon le nombre de clics. */
+  async clickBonus(gamePlayerId: string): Promise<void> {
+    await this.enqueue(async () => {
+      this.assertBullshit();
+      this.assertPlayer(gamePlayerId);
+      const bonus = this.bonus;
+      if (!bonus) throw new HttpError(409, 'NO_BONUS', "Il n'y a aucun mot à féliciter pour l'instant.");
+      if (bonus.authorId === gamePlayerId) {
+        throw new HttpError(403, 'OWN_WORD', 'Tu ne peux pas te féliciter toi-même.');
+      }
+      if (bonus.voterIds.includes(gamePlayerId)) {
+        throw new HttpError(409, 'ALREADY_CLICKED', 'Tu as déjà mis un +1 sur ce mot.');
+      }
+      const author = this.state.players.find((p) => p.gamePlayerId === bonus.authorId);
+      if (!author) throw new HttpError(409, 'NO_BONUS', "L'auteur du mot a quitté la partie.");
+
+      const before = bonusTotal(bonus.voterIds.length);
+      const after = bonusTotal(bonus.voterIds.length + 1);
+      this.bonus = { ...bonus, voterIds: [...bonus.voterIds, gamePlayerId] };
+      author.score += after - before;
+      await persistPlayerScore(author.gamePlayerId, author.score);
+      this.emitBullshitUpdate();
+    });
+  }
+
+  async proposeWord(gamePlayerId: string, raw: string): Promise<void> {
+    await this.enqueue(async () => {
+      this.assertBullshit();
+      this.assertPlayer(gamePlayerId);
+      const current = this.state.players[this.state.currentTurnIndex];
+      if (!current || current.gamePlayerId !== gamePlayerId) {
+        throw new HttpError(403, 'NOT_YOUR_TURN', "Ce n'est pas votre tour.");
+      }
+      if (this.proposal) {
+        throw new HttpError(409, 'PROPOSAL_PENDING', 'Une proposition est déjà en cours de vote.');
+      }
+      const word = normalizeWord(raw);
+      if (word.length < 2 || word.length > 15) {
+        throw new HttpError(400, 'INVALID_WORD', 'Le mot doit faire entre 2 et 15 lettres.');
+      }
+      if (this.checker.isValidWord(word)) {
+        throw new HttpError(409, 'ALREADY_VALID', 'Ce mot est déjà valide, pas besoin de le proposer.');
+      }
+      this.proposal = { id: randomUUID(), word, proposerId: gamePlayerId, accepted: [], rejected: [] };
+      this.emitBullshitUpdate();
+    });
+  }
+
+  async voteWord(gamePlayerId: string, proposalId: string, accept: boolean): Promise<void> {
+    await this.enqueue(async () => {
+      this.assertBullshit();
+      this.assertPlayer(gamePlayerId);
+      const proposal = this.proposal;
+      if (!proposal || proposal.id !== proposalId) {
+        throw new HttpError(409, 'NO_PROPOSAL', "Cette proposition n'est plus en cours.");
+      }
+      if (proposal.proposerId === gamePlayerId) {
+        throw new HttpError(403, 'OWN_PROPOSAL', 'Tu ne peux pas voter pour ta propre proposition.');
+      }
+      if (proposal.accepted.includes(gamePlayerId) || proposal.rejected.includes(gamePlayerId)) {
+        throw new HttpError(409, 'ALREADY_VOTED', 'Tu as déjà voté.');
+      }
+
+      const updated: ProposalState = accept
+        ? { ...proposal, accepted: [...proposal.accepted, gamePlayerId] }
+        : { ...proposal, rejected: [...proposal.rejected, gamePlayerId] };
+
+      const voters = this.state.players.filter((p) => p.gamePlayerId !== proposal.proposerId);
+      if (updated.rejected.length > 0) {
+        this.proposal = null;
+        this.io.to(this.roomName).emit('proposal:resolved', { id: proposal.id, word: proposal.word, outcome: 'rejected' });
+      } else if (voters.every((p) => updated.accepted.includes(p.gamePlayerId))) {
+        this.proposal = null;
+        this.extraWords.add(proposal.word);
+        await persistExtraWords(this.gameId, [...this.extraWords]);
+        this.io.to(this.roomName).emit('proposal:resolved', { id: proposal.id, word: proposal.word, outcome: 'accepted' });
+      } else {
+        this.proposal = updated;
+      }
+      this.emitBullshitUpdate();
+    });
+  }
+
+  async cancelProposal(gamePlayerId: string): Promise<void> {
+    await this.enqueue(async () => {
+      this.assertBullshit();
+      if (!this.proposal || this.proposal.proposerId !== gamePlayerId) {
+        throw new HttpError(409, 'NO_PROPOSAL', "Tu n'as aucune proposition en cours.");
+      }
+      this.cancelProposalSilently();
+      this.emitBullshitUpdate();
+    });
   }
 
   private async onTurnTimeout(): Promise<void> {
@@ -353,6 +525,7 @@ export class GameRoom {
     const viewer = this.state.players.find((p) => p.gamePlayerId === viewerGamePlayerId);
     return {
       gameId: this.state.gameId,
+      mode: this.mode,
       inviteCode: this.inviteCode,
       status: this.state.status,
       board: this.state.board,
@@ -363,6 +536,9 @@ export class GameRoom {
       turnDeadline: this.state.turnDeadline,
       yourRack: viewer?.rack ?? [],
       moveHistory: this.moveHistory,
+      bonus: this.bonus,
+      proposal: this.proposal,
+      extraWords: [...this.extraWords],
     };
   }
 
@@ -375,6 +551,7 @@ export class GameRoom {
       bagCount: this.state.bag.length,
       turnDeadline: this.state.turnDeadline,
       gameStatus: this.state.status,
+      bonus: this.bonus,
     };
   }
 
