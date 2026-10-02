@@ -64,10 +64,16 @@ const ALL_KEYS = CUSTOMIZABLE_COLORS.flatMap((g) => g.items.map((i) => i.key));
 
 const THEME_KEY = 'scrabble:theme';
 const CUSTOM_KEY = 'scrabble:theme-custom';
+const SAVED_KEY = 'scrabble:themes';
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
 type CustomColors = Record<string, string>;
 
-interface CustomState {
+export interface SavedTheme extends CustomState {
+  name: string;
+}
+
+export interface CustomState {
   base: BaseTheme;
   colors: CustomColors;
 }
@@ -81,25 +87,76 @@ function readStoredTheme(): Theme | null {
   }
 }
 
+/** Valide un objet quelconque (localStorage, fichier importé) en `CustomState` ; `null` si inexploitable. */
+export function sanitizeCustom(parsed: unknown): CustomState | null {
+  if (!parsed || typeof parsed !== 'object') return null;
+  const { base: rawBase, colors: rawColors } = parsed as { base?: unknown; colors?: unknown };
+  if (rawColors !== undefined && (rawColors === null || typeof rawColors !== 'object')) return null;
+  const colors: CustomColors = {};
+  for (const [key, value] of Object.entries(rawColors ?? {})) {
+    if (ALL_KEYS.includes(key) && typeof value === 'string' && HEX_COLOR.test(value)) {
+      colors[key] = value.toLowerCase();
+    }
+  }
+  return { base: rawBase === 'dark' ? 'dark' : 'light', colors };
+}
+
 function readStoredCustom(): CustomState {
-  const fallback: CustomState = { base: 'light', colors: {} };
   try {
     const raw = localStorage.getItem(CUSTOM_KEY);
-    if (!raw) return fallback;
-    const parsed = JSON.parse(raw) as { base?: unknown; colors?: unknown };
-    const base: BaseTheme = parsed.base === 'dark' ? 'dark' : 'light';
-    const colors: CustomColors = {};
-    if (parsed.colors && typeof parsed.colors === 'object') {
-      for (const [key, value] of Object.entries(parsed.colors)) {
-        if (ALL_KEYS.includes(key) && typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value)) {
-          colors[key] = value;
-        }
-      }
-    }
-    return { base, colors };
+    return (raw && sanitizeCustom(JSON.parse(raw))) || { base: 'light', colors: {} };
   } catch {
-    return fallback;
+    return { base: 'light', colors: {} };
   }
+}
+
+function readStoredThemes(): SavedTheme[] {
+  try {
+    const raw = localStorage.getItem(SAVED_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.flatMap((item: unknown) => {
+      const name = (item as { name?: unknown } | null)?.name;
+      const custom = sanitizeCustom(item);
+      return typeof name === 'string' && name.trim() && custom
+        ? [{ name: name.trim(), ...custom }]
+        : [];
+    });
+  } catch {
+    return [];
+  }
+}
+
+const THEME_FILE_FORMAT = 'scrabble-theme';
+
+/** Sérialise un thème en JSON portable (palette complète, pour qu'il ne dépende pas des défauts de l'appli). */
+export function serializeTheme(theme: {
+  name?: string;
+  base: BaseTheme;
+  colors: CustomColors;
+}): string {
+  return JSON.stringify({ format: THEME_FILE_FORMAT, version: 1, ...theme }, null, 2);
+}
+
+/** Parse un JSON de thème exporté ; lève une `Error` au message lisible si le contenu est invalide. */
+export function parseThemeJson(text: string): { name?: string } & CustomState {
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error('Ce n’est pas un JSON valide.');
+  }
+  const custom = sanitizeCustom(data);
+  if (!custom || (data as { format?: unknown }).format !== THEME_FILE_FORMAT) {
+    throw new Error('Ce fichier n’est pas un thème Scrabble.');
+  }
+  if (Object.keys(custom.colors).length === 0)
+    throw new Error('Aucune couleur reconnue dans ce thème.');
+  const name = (data as { name?: unknown }).name;
+  return {
+    ...custom,
+    ...(typeof name === 'string' && name.trim() ? { name: name.trim().slice(0, 40) } : {}),
+  };
 }
 
 function prefersDark(): boolean {
@@ -114,9 +171,11 @@ function prefersDark(): boolean {
 function toHex(value: string): string {
   const v = value.trim();
   if (/^#[0-9a-fA-F]{6}$/.test(v)) return v.toLowerCase();
-  if (/^#[0-9a-fA-F]{3}$/.test(v)) return `#${v[1]}${v[1]}${v[2]}${v[2]}${v[3]}${v[3]}`.toLowerCase();
+  if (/^#[0-9a-fA-F]{3}$/.test(v))
+    return `#${v[1]}${v[1]}${v[2]}${v[2]}${v[3]}${v[3]}`.toLowerCase();
   const m = v.match(/rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/);
-  if (m) return `#${[m[1], m[2], m[3]].map((n) => Number(n).toString(16).padStart(2, '0')).join('')}`;
+  if (m)
+    return `#${[m[1], m[2], m[3]].map((n) => Number(n).toString(16).padStart(2, '0')).join('')}`;
   return '#000000';
 }
 
@@ -146,12 +205,23 @@ export interface ThemeValue {
   /** Change la palette de départ et efface les surcharges. */
   setCustomBase: (base: BaseTheme) => void;
   resetCustom: () => void;
+  savedThemes: SavedTheme[];
+  /** Enregistre le thème personnalisé courant sous ce nom (remplace un thème du même nom). */
+  saveTheme: (name: string) => void;
+  /** Applique un thème enregistré comme thème personnalisé et l'active. */
+  loadTheme: (name: string) => void;
+  deleteTheme: (name: string) => void;
+  /** Remplace le thème personnalisé par un thème importé et l'active. */
+  applyImported: (imported: CustomState) => void;
 }
 
 /** Thème courant + thème personnalisé, persistés dans localStorage (best-effort). */
 export function useTheme(): ThemeValue {
-  const [theme, setTheme] = useState<Theme>(() => readStoredTheme() ?? (prefersDark() ? 'dark' : 'light'));
+  const [theme, setTheme] = useState<Theme>(
+    () => readStoredTheme() ?? (prefersDark() ? 'dark' : 'light'),
+  );
   const [custom, setCustom] = useState<CustomState>(readStoredCustom);
+  const [savedThemes, setSavedThemes] = useState<SavedTheme[]>(readStoredThemes);
   const [basePalette, setBasePalette] = useState<CustomColors>({});
 
   useEffect(() => {
@@ -172,12 +242,20 @@ export function useTheme(): ThemeValue {
     }
   }, [theme, custom]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(SAVED_KEY, JSON.stringify(savedThemes));
+    } catch {
+      // best-effort
+    }
+  }, [savedThemes]);
+
   const cycleTheme = useCallback(() => {
     setTheme((current) => CYCLE[(CYCLE.indexOf(current) + 1) % CYCLE.length] ?? 'light');
   }, []);
 
   const setCustomColor = useCallback((key: string, value: string) => {
-    if (!ALL_KEYS.includes(key) || !/^#[0-9a-fA-F]{6}$/.test(value)) return;
+    if (!ALL_KEYS.includes(key) || !HEX_COLOR.test(value)) return;
     setCustom((c) => ({ ...c, colors: { ...c.colors, [key]: value } }));
   }, []);
 
@@ -189,6 +267,35 @@ export function useTheme(): ThemeValue {
     setCustom((c) => ({ ...c, colors: {} }));
   }, []);
 
+  const saveTheme = useCallback(
+    (name: string) => {
+      const trimmed = name.trim().slice(0, 40);
+      if (!trimmed) return;
+      setSavedThemes((list) => [
+        ...list.filter((t) => t.name !== trimmed),
+        { name: trimmed, ...custom },
+      ]);
+    },
+    [custom],
+  );
+
+  const applyImported = useCallback((imported: CustomState) => {
+    setCustom({ base: imported.base, colors: imported.colors });
+    setTheme('custom');
+  }, []);
+
+  const loadTheme = useCallback(
+    (name: string) => {
+      const found = savedThemes.find((t) => t.name === name);
+      if (found) applyImported(found);
+    },
+    [savedThemes, applyImported],
+  );
+
+  const deleteTheme = useCallback((name: string) => {
+    setSavedThemes((list) => list.filter((t) => t.name !== name));
+  }, []);
+
   return {
     theme,
     cycleTheme,
@@ -197,5 +304,10 @@ export function useTheme(): ThemeValue {
     setCustomColor,
     setCustomBase,
     resetCustom,
+    savedThemes,
+    saveTheme,
+    loadTheme,
+    deleteTheme,
+    applyImported,
   };
 }
