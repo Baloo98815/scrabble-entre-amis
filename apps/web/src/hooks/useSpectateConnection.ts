@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { GameStatePayload, MoveAppliedPayload } from '@scrabble/shared';
+import type { BullshitUpdatePayload, GameStatePayload, MoveAppliedPayload } from '@scrabble/shared';
 import { getSocket } from '../api/socket.js';
 import { useGameStore } from '../state/gameStore.js';
 import type { ConnectionError } from './useGameConnection.js';
@@ -15,6 +15,7 @@ export function useSpectateConnection(gameId: string | null): {
 } {
   const applyGameState = useGameStore((s) => s.applyGameState);
   const applyMoveApplied = useGameStore((s) => s.applyMoveApplied);
+  const applyBullshitUpdate = useGameStore((s) => s.applyBullshitUpdate);
   const reset = useGameStore((s) => s.reset);
 
   const [connected, setConnected] = useState(false);
@@ -61,10 +62,15 @@ export function useSpectateConnection(gameId: string | null): {
       }
     }
 
+    function handleBullshitUpdate(payload: BullshitUpdatePayload): void {
+      applyBullshitUpdate(payload);
+    }
+
     socket.on('connect', handleConnect);
     socket.on('disconnect', handleDisconnect);
     socket.on('game:state', handleGameState);
     socket.on('move:applied', handleMoveApplied);
+    socket.on('bullshit:update', handleBullshitUpdate);
 
     if (socket.connected) {
       handleConnect();
@@ -90,13 +96,14 @@ export function useSpectateConnection(gameId: string | null): {
       socket.off('disconnect', handleDisconnect);
       socket.off('game:state', handleGameState);
       socket.off('move:applied', handleMoveApplied);
+      socket.off('bullshit:update', handleBullshitUpdate);
       document.removeEventListener('visibilitychange', resyncNow);
       window.removeEventListener('focus', resyncNow);
       window.removeEventListener('online', resyncNow);
       socket.emit('game:leave', () => undefined);
       reset();
     };
-  }, [gameId, applyGameState, applyMoveApplied, reset]);
+  }, [gameId, applyGameState, applyMoveApplied, applyBullshitUpdate, reset]);
 
   return { connected, error };
 }

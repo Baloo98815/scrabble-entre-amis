@@ -96,3 +96,13 @@ export async function persistMove(state: GameState, gamePlayerId: string, result
 export async function setPlayerConnected(gamePlayerId: string, isConnected: boolean): Promise<void> {
   await prisma.gamePlayer.update({ where: { id: gamePlayerId }, data: { isConnected } });
 }
+
+/** Scrabbullshit : persiste le score d'un joueur modifié hors coup (bonus « +1 »). */
+export async function persistPlayerScore(gamePlayerId: string, score: number): Promise<void> {
+  await prisma.gamePlayer.update({ where: { id: gamePlayerId }, data: { score } });
+}
+
+/** Scrabbullshit : persiste les mots acceptés à l'unanimité pour cette partie. */
+export async function persistExtraWords(gameId: string, extraWords: string[]): Promise<void> {
+  await prisma.game.update({ where: { id: gameId }, data: { extraWords } });
+}

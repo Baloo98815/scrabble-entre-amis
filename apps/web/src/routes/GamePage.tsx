@@ -15,6 +15,8 @@ import { ExchangePanel } from '../components/game/ExchangePanel.js';
 import { TurnTimer } from '../components/game/TurnTimer.js';
 import { TurnToast } from '../components/game/TurnToast.js';
 import { ConfirmModal } from '../components/game/ConfirmModal.js';
+import { ProposalModal } from '../components/game/ProposalModal.js';
+import { ProposeWordPanel } from '../components/game/ProposeWordPanel.js';
 import { CopyableLink } from '../components/game/CopyableLink.js';
 import { useGameConnection, MoveError } from '../hooks/useGameConnection.js';
 import { useKeyboardPlacement } from '../hooks/useKeyboardPlacement.js';
@@ -33,7 +35,18 @@ function shuffleArray<T>(items: T[]): T[] {
 export function GamePage() {
   const { gameId } = useParams<{ gameId: string }>();
   const store = useGameStore();
-  const { connected, error: connectionError, start, placeMove, exchange, pass } = useGameConnection(gameId ?? null);
+  const {
+    connected,
+    error: connectionError,
+    start,
+    placeMove,
+    exchange,
+    pass,
+    clickBonus,
+    proposeWord,
+    voteWord,
+    cancelProposal,
+  } = useGameConnection(gameId ?? null);
 
   const [rackOrder, setRackOrder] = useState<Letter[]>([]);
   const rackKey = [...store.yourRack].sort().join('');
@@ -47,6 +60,11 @@ export function GamePage() {
   const me = store.players.find((p) => p.isYou);
   const isMyTurn = store.status === 'IN_PROGRESS' && me?.seat === store.currentTurnIndex;
   const canPlace = isMyTurn;
+  const isBullshit = store.mode === 'SCRABBULLSHIT';
+
+  function reportError(err: unknown): void {
+    setActionError(err instanceof MoveError ? err.message : 'Action impossible.');
+  }
 
   const placement = useKeyboardPlacement(store.board, rackOrder, canPlace);
   const previewScore = useLivePreviewScore(store.board, placement.pending);
@@ -178,6 +196,7 @@ export function GamePage() {
       <div className="page page--centered">
         <ConnectionBanner connected={connected} />
         <h1>Salle d'attente</h1>
+        <p className="page__hint">Mode : {isBullshit ? 'Scrabbullshit' : 'Classic'}</p>
         <p>Partage ce lien avec tes amis pour qu'ils rejoignent la partie :</p>
         <CopyableLink label="Lien pour rejoindre" url={inviteUrl} />
         <p>Ou pour la suivre sans y jouer (lien spectateur) :</p>
@@ -240,8 +259,17 @@ export function GamePage() {
         {isMyTurn && <p className="game-page__turn">C'est ton tour ! <TurnTimer deadline={store.turnDeadline} /></p>}
         {!isMyTurn && <p className="game-page__turn"><TurnTimer deadline={store.turnDeadline} /></p>}
         <WordChecker />
+        {isBullshit && isMyTurn && <ProposeWordPanel disabled={!!store.proposal} onPropose={proposeWord} />}
+        {isBullshit && store.extraWords.length > 0 && (
+          <p className="page__hint">Mots ajoutés pour cette partie : {store.extraWords.join(', ')}</p>
+        )}
         <h2>Derniers mots joués</h2>
-        <MoveHistory entries={store.moveHistory} />
+        <MoveHistory
+          entries={store.moveHistory}
+          bonus={isBullshit ? store.bonus : null}
+          myGamePlayerId={me?.gamePlayerId}
+          onClickBonus={() => void clickBonus().catch(reportError)}
+        />
         <BagContents bagCount={store.bagCount} board={store.board} ownRack={store.yourRack} />
       </aside>
 
@@ -331,6 +359,26 @@ export function GamePage() {
           onConfirm={handlePass}
           onCancel={() => setShowPassConfirm(false)}
         />
+      )}
+
+      {isBullshit && store.proposal && me && (
+        <ProposalModal
+          proposal={store.proposal}
+          proposerPseudo={store.players.find((p) => p.gamePlayerId === store.proposal?.proposerId)?.pseudo ?? 'Un joueur'}
+          myGamePlayerId={me.gamePlayerId}
+          onVote={(accept) => void voteWord(store.proposal!.id, accept).catch(reportError)}
+          onCancel={() => void cancelProposal().catch(reportError)}
+        />
+      )}
+
+      {store.proposalOutcome && (
+        <div className="turn-toast" role="status" aria-live="polite" onClick={store.dismissProposalOutcome}>
+          {store.proposalOutcome.outcome === 'accepted'
+            ? `✅ « ${store.proposalOutcome.word} » ajouté au dictionnaire de la partie`
+            : store.proposalOutcome.outcome === 'rejected'
+              ? `❌ « ${store.proposalOutcome.word} » refusé`
+              : `« ${store.proposalOutcome.word} » : proposition annulée`}
+        </div>
       )}
 
       <TurnToast visible={showTurnToast} onDismiss={() => setShowTurnToast(false)} />

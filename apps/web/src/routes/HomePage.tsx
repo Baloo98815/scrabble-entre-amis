@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import type { GameSummary } from '@scrabble/shared';
+import type { GameMode, GameSummary } from '@scrabble/shared';
 import { activeGames, createGame } from '../api/games.js';
 import { ApiError } from '../api/http.js';
 import { logout } from '../api/auth.js';
@@ -13,6 +13,7 @@ export function HomePage() {
   const { user, loading, refresh } = useAuthContext();
   const navigate = useNavigate();
 
+  const [mode, setMode] = useState<GameMode>('CLASSIC');
   const [maxPlayers, setMaxPlayers] = useState(4);
   const [timeoutEnabled, setTimeoutEnabled] = useState(false);
   const [timeoutSeconds, setTimeoutSeconds] = useState(90);
@@ -43,6 +44,7 @@ export function HomePage() {
     setSubmitting(true);
     try {
       const { game } = await createGame({
+        mode,
         maxPlayers,
         turnTimeoutSeconds: timeoutEnabled ? timeoutSeconds : null,
         pseudo: user ? undefined : pseudo.trim(),
@@ -105,6 +107,20 @@ export function HomePage() {
       <section className="card">
         <h2>Créer une nouvelle partie</h2>
         <form className="form" onSubmit={handleCreate}>
+          <label>
+            Mode de jeu
+            <select value={mode} onChange={(e) => setMode(e.target.value as GameMode)}>
+              <option value="CLASSIC">Classic</option>
+              <option value="SCRABBULLSHIT">Scrabbullshit</option>
+            </select>
+          </label>
+          {mode === 'SCRABBULLSHIT' && (
+            <p className="page__hint">
+              +1 sur le mot qui vient d’être joué (1, 5 ou 10 points selon le nombre de +1) et propositions de mots
+              soumises au vote des autres joueurs.
+            </p>
+          )}
+
           <label>
             Nombre de joueurs
             <select value={maxPlayers} onChange={(e) => setMaxPlayers(Number(e.target.value))}>

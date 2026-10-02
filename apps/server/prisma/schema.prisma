@@ -26,6 +26,11 @@ enum GameStatus {
   ABANDONED
 }
 
+enum GameMode {
+  CLASSIC
+  SCRABBULLSHIT
+}
+
 enum MoveType {
   PLACE
   EXCHANGE
@@ -37,6 +42,9 @@ model Game {
   /// Code court utilisé dans le lien d'invitation (ex: /join/xxxx).
   inviteCode String @unique @default(cuid())
   status GameStatus @default(WAITING)
+  mode   GameMode   @default(CLASSIC)
+  /// Scrabbullshit : mots acceptés à l'unanimité, valables pour cette partie uniquement (normalisés).
+  extraWords String[] @default([])
   maxPlayers Int @default(4)
 
   /// Snapshot JSON du plateau (Board), pour rehydratation instantanée au redémarrage.

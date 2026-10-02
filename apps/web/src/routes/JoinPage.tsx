@@ -52,7 +52,7 @@ export function JoinPage() {
     <div className="page page--centered">
       <h1>Rejoindre une partie</h1>
       <p>
-        {game.players.length} / {game.maxPlayers} joueur(s) - statut : {game.status}
+        {game.players.length} / {game.maxPlayers} joueur(s) - mode {game.mode === 'SCRABBULLSHIT' ? 'Scrabbullshit' : 'Classic'} - statut : {game.status}
       </p>
       <ul className="join-preview__players">
         {game.players.map((p) => (

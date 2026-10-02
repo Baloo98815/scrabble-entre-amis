@@ -853,3 +853,33 @@ button:disabled {
 .bag-contents__letter {
   font-weight: 700;
 }
+
+.bonus-button {
+  margin-left: 0.35rem;
+  padding: 0 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
+  color: var(--accent-dark);
+  background: transparent;
+  cursor: pointer;
+}
+.bonus-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.propose-word {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0.75rem 0;
+}
+
+.proposal__word {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+}

@@ -1,8 +1,13 @@
-import { normalizeWord } from '@scrabble/shared';
+import { bonusTotal, normalizeWord, type BonusState } from '@scrabble/shared';
 import type { MoveHistoryEntry } from '../../state/deriveMoveSummary.js';
 
 interface MoveHistoryProps {
   entries: MoveHistoryEntry[];
+  /** Mode Scrabbullshit : bonus « +1 » ouvert sur le dernier coup. */
+  bonus?: BonusState | null;
+  /** Id du joueur courant (undefined pour un spectateur : le +1 s'affiche mais reste inactif). */
+  myGamePlayerId?: string;
+  onClickBonus?: () => void;
 }
 
 /** Même URL que la définition côté serveur : mot normalisé, en minuscules, sur 1mot.net. */
@@ -15,7 +20,7 @@ function describeNonPlaceMove(entry: MoveHistoryEntry): string {
   return entry.triggeredBy === 'timeout' ? 'a passé (temps écoulé)' : 'a passé';
 }
 
-export function MoveHistory({ entries }: MoveHistoryProps) {
+export function MoveHistory({ entries, bonus = null, myGamePlayerId, onClickBonus }: MoveHistoryProps) {
   if (entries.length === 0) {
     return <p className="move-history move-history--empty">Aucun coup joué pour l’instant.</p>;
   }
@@ -38,6 +43,9 @@ export function MoveHistory({ entries }: MoveHistoryProps) {
                   >
                     {word}
                   </a>
+                  {bonus && bonus.turnNumber === entry.turnNumber && bonus.word === word && (
+                    <BonusButton bonus={bonus} myGamePlayerId={myGamePlayerId} onClick={onClickBonus} />
+                  )}
                 </span>
               ))}
             </span>
@@ -48,5 +56,30 @@ export function MoveHistory({ entries }: MoveHistoryProps) {
         </li>
       ))}
     </ul>
+  );
+}
+
+function BonusButton({
+  bonus,
+  myGamePlayerId,
+  onClick,
+}: {
+  bonus: BonusState;
+  myGamePlayerId?: string;
+  onClick?: () => void;
+}) {
+  const clicks = bonus.voterIds.length;
+  const alreadyClicked = !!myGamePlayerId && bonus.voterIds.includes(myGamePlayerId);
+  const isAuthor = myGamePlayerId === bonus.authorId;
+  const disabled = !onClick || !myGamePlayerId || alreadyClicked || isAuthor;
+  const title = isAuthor
+    ? 'Les autres peuvent féliciter ton mot'
+    : alreadyClicked
+      ? 'Tu as déjà mis un +1 sur ce mot'
+      : 'Féliciter ce mot : +1 pour son auteur (1, 5 puis 10 points selon le nombre de +1)';
+  return (
+    <button type="button" className="bonus-button" disabled={disabled} onClick={onClick} title={title}>
+      +1{clicks > 0 ? ` ×${clicks} (${bonusTotal(clicks)} pts)` : ''}
+    </button>
   );
 }
