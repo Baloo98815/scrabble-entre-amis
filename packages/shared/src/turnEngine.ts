@@ -15,6 +15,8 @@ export interface CreateInitialGameStateParams {
   /** gamePlayerId de chaque joueur, dans l'ordre des sièges (l'ordre de jeu). */
   playerIds: string[];
   turnTimeoutSeconds?: number | null;
+  /** Index (dans `playerIds`) du joueur qui ouvre la partie ; 0 par défaut. L'ordre de jeu reste celui des sièges. */
+  firstPlayerIndex?: number;
   rng?: () => number;
 }
 
@@ -35,7 +37,7 @@ export function createInitialGameState(params: CreateInitialGameStateParams): Ga
     board: createEmptyBoard(),
     bag,
     players,
-    currentTurnIndex: 0,
+    currentTurnIndex: params.firstPlayerIndex ?? 0,
     consecutivePasses: 0,
     turnNumber: 0,
     turnTimeoutSeconds: params.turnTimeoutSeconds ?? null,

@@ -200,6 +200,7 @@ export class GameRoom {
       this.state = createInitialGameState({
         gameId: this.gameId,
         playerIds,
+        firstPlayerIndex: Math.floor(Math.random() * playerIds.length),
         turnTimeoutSeconds: this.state.turnTimeoutSeconds,
       });
 

@@ -12,6 +12,11 @@ import {
 import type { GameState, Placement } from './types.js';
 
 describe('createInitialGameState', () => {
+  it('démarre au joueur demandé via firstPlayerIndex', () => {
+    const state = createInitialGameState({ gameId: 'g1', playerIds: ['p1', 'p2', 'p3'], firstPlayerIndex: 2 });
+    expect(state.currentTurnIndex).toBe(2);
+  });
+
   it('deals a full rack to each player and shrinks the bag accordingly', () => {
     const state = createInitialGameState({ gameId: 'g1', playerIds: ['p1', 'p2', 'p3'], rng: () => 0.42 });
     expect(state.players).toHaveLength(3);
