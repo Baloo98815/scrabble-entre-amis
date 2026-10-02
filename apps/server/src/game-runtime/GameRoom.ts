@@ -29,9 +29,12 @@ import {
   loadGameForRuntime,
   persistExtraWords,
   persistGameClosed,
+  persistBonusClick,
   persistGameStart,
   persistMove,
-  persistPlayerScore,
+  persistProposalCreated,
+  persistProposalResolved,
+  persistProposalVote,
   setPlayerConnected,
 } from '../services/persistence.service.js';
 import type { IOServer, IOSocket } from '../sockets/types.js';
@@ -361,6 +364,7 @@ export class GameRoom {
     if (!this.proposal) return;
     const { id, word } = this.proposal;
     this.proposal = null;
+    void persistProposalResolved(id, 'CANCELLED');
     this.io.to(this.roomName).emit('proposal:resolved', { id, word, outcome: 'cancelled' });
   }
 
@@ -394,7 +398,15 @@ export class GameRoom {
       const after = bonusTotal(bonus.voterIds.length + 1);
       this.bonus = { ...bonus, voterIds: [...bonus.voterIds, gamePlayerId] };
       author.score += after - before;
-      await persistPlayerScore(author.gamePlayerId, author.score);
+      await persistBonusClick({
+        gameId: this.gameId,
+        turnNumber: bonus.turnNumber,
+        word: bonus.word,
+        fromPlayerId: gamePlayerId,
+        toPlayerId: author.gamePlayerId,
+        points: after - before,
+        authorScore: author.score,
+      });
       this.emitBullshitUpdate();
     });
   }
@@ -418,6 +430,7 @@ export class GameRoom {
         throw new HttpError(409, 'ALREADY_VALID', 'Ce mot est déjà valide, pas besoin de le proposer.');
       }
       this.proposal = { id: randomUUID(), word, proposerId: gamePlayerId, accepted: [], rejected: [] };
+      await persistProposalCreated({ id: this.proposal.id, gameId: this.gameId, proposerId: gamePlayerId, word });
       this.emitBullshitUpdate();
     });
   }
@@ -441,14 +454,18 @@ export class GameRoom {
         ? { ...proposal, accepted: [...proposal.accepted, gamePlayerId] }
         : { ...proposal, rejected: [...proposal.rejected, gamePlayerId] };
 
+      await persistProposalVote({ proposalId: proposal.id, voterId: gamePlayerId, accept });
+
       const voters = this.state.players.filter((p) => p.gamePlayerId !== proposal.proposerId);
       if (updated.rejected.length > 0) {
         this.proposal = null;
+        void persistProposalResolved(proposal.id, 'REJECTED');
         this.io.to(this.roomName).emit('proposal:resolved', { id: proposal.id, word: proposal.word, outcome: 'rejected' });
       } else if (voters.every((p) => updated.accepted.includes(p.gamePlayerId))) {
         this.proposal = null;
         this.extraWords.add(proposal.word);
         await persistExtraWords(this.gameId, [...this.extraWords]);
+        void persistProposalResolved(proposal.id, 'ACCEPTED');
         this.io.to(this.roomName).emit('proposal:resolved', { id: proposal.id, word: proposal.word, outcome: 'accepted' });
       } else {
         this.proposal = updated;

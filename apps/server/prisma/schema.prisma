@@ -31,6 +31,14 @@ enum GameMode {
   SCRABBULLSHIT
 }
 
+enum ProposalOutcome {
+  /// Vote en cours (ou serveur redémarré avant la fin du vote : traité comme annulé dans les stats).
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
 enum MoveType {
   PLACE
   EXCHANGE
@@ -38,20 +46,20 @@ enum MoveType {
 }
 
 model Game {
-  id     String     @id @default(uuid())
+  id         String     @id @default(uuid())
   /// Code court utilisé dans le lien d'invitation (ex: /join/xxxx).
-  inviteCode String @unique @default(cuid())
-  status GameStatus @default(WAITING)
-  mode   GameMode   @default(CLASSIC)
+  inviteCode String     @unique @default(cuid())
+  status     GameStatus @default(WAITING)
+  mode       GameMode   @default(CLASSIC)
   /// Scrabbullshit : mots acceptés à l'unanimité, valables pour cette partie uniquement (normalisés).
-  extraWords String[] @default([])
-  maxPlayers Int @default(4)
+  extraWords String[]   @default([])
+  maxPlayers Int        @default(4)
 
   /// Snapshot JSON du plateau (Board), pour rehydratation instantanée au redémarrage.
   /// null tant que la partie est en statut WAITING (pas encore démarrée).
   boardState Json?
   /// Snapshot JSON du sac de lettres restant (Letter[]). null tant que WAITING.
-  bagState Json?
+  bagState   Json?
 
   currentTurnIndex  Int @default(0)
   consecutivePasses Int @default(0)
@@ -65,8 +73,10 @@ model Game {
   startedAt  DateTime?
   finishedAt DateTime?
 
-  players GamePlayer[]
-  moves   Move[]
+  players       GamePlayer[]
+  moves         Move[]
+  bonusClicks   BonusClick[]
+  wordProposals WordProposal[]
 
   @@map("games")
 }
@@ -83,17 +93,21 @@ model GamePlayer {
   /// Renseignés pour un joueur invité (pas de ligne User).
   guestName String?
   /// Cookie anonyme unique par navigateur, réutilisé sur toutes les parties rejointes.
-  guestId String?
+  guestId   String?
 
   seat  Int
   /// Snapshot JSON du chevalet courant (Letter[]). null tant que la partie n'a pas démarré.
   rack  Json?
-  score Int @default(0)
+  score Int   @default(0)
 
   isConnected Boolean  @default(false)
   joinedAt    DateTime @default(now())
 
-  moves Move[]
+  moves         Move[]
+  bonusGiven    BonusClick[]   @relation("BonusGiven")
+  bonusReceived BonusClick[]   @relation("BonusReceived")
+  wordProposals WordProposal[]
+  proposalVotes ProposalVote[]
 
   @@unique([gameId, seat])
   @@map("game_players")
@@ -114,7 +128,9 @@ model Move {
   tilesPlaced Json?
   /// WordFormed[] formés ce coup (null pour EXCHANGE/PASS).
   wordsFormed Json?
-  score       Int   @default(0)
+  score       Int     @default(0)
+  /// true si les 7 lettres du chevalet ont été posées d'un coup (« scrabble »). Succès / stats.
+  isBingo     Boolean @default(false)
   /// Chevalet du joueur après application du coup (Letter[]).
   rackAfter   Json
 
@@ -135,4 +151,68 @@ model DictionaryWord {
   createdAt DateTime @default(now())
 
   @@map("dictionary_words")
+}
+
+/// Scrabbullshit : un « +1 » donné sur le mot d'un autre joueur (un enregistrement par clic).
+model BonusClick {
+  id     String @id @default(uuid())
+  game   Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  gameId String
+
+  /// Tour du coup félicité et mot concerné (mot principal du coup).
+  turnNumber Int
+  word       String
+
+  fromPlayer   GamePlayer @relation("BonusGiven", fields: [fromPlayerId], references: [id], onDelete: Cascade)
+  fromPlayerId String
+  toPlayer     GamePlayer @relation("BonusReceived", fields: [toPlayerId], references: [id], onDelete: Cascade)
+  toPlayerId   String
+
+  /// Points réellement ajoutés à l'auteur par ce clic (1, puis 4, puis 5 : total 1/5/10).
+  points Int
+
+  createdAt DateTime @default(now())
+
+  @@index([toPlayerId])
+  @@index([fromPlayerId])
+  @@map("bonus_clicks")
+}
+
+/// Scrabbullshit : mot proposé au vote des autres joueurs, avec son issue.
+model WordProposal {
+  id     String @id @default(uuid())
+  game   Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  gameId String
+
+  proposer   GamePlayer @relation(fields: [proposerId], references: [id], onDelete: Cascade)
+  proposerId String
+
+  word    String
+  outcome ProposalOutcome
+
+  votes ProposalVote[]
+
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+
+  @@index([proposerId])
+  @@map("word_proposals")
+}
+
+/// Scrabbullshit : vote d'un joueur sur une proposition de mot (qui a accepté / refusé quoi).
+model ProposalVote {
+  id         String       @id @default(uuid())
+  proposal   WordProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  proposalId String
+
+  voter   GamePlayer @relation(fields: [voterId], references: [id], onDelete: Cascade)
+  voterId String
+
+  accept Boolean
+
+  createdAt DateTime @default(now())
+
+  @@unique([proposalId, voterId])
+  @@index([voterId])
+  @@map("proposal_votes")
 }

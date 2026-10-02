@@ -7,6 +7,7 @@ import { HttpError } from './errors.js';
 import { registerAuthContext } from './plugins/authContext.js';
 import { adminDictionaryRoutes, dictionaryRoutes } from './routes/dictionary.routes.js';
 import { authRoutes } from './routes/auth.routes.js';
+import { statsRoutes } from './routes/stats.routes.js';
 import { gamesRoutes } from './routes/games.routes.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
@@ -37,6 +38,7 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   await app.register(authRoutes, { prefix: '/api/auth' });
   await app.register(gamesRoutes, { prefix: '/api/games' });
+  await app.register(statsRoutes, { prefix: '/api/stats' });
   await app.register(dictionaryRoutes, { prefix: '/api/dictionary' });
   await app.register(adminDictionaryRoutes, { prefix: '/api/admin/dictionary' });
 

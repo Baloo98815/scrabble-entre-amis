@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client';
-import type { GameState, MoveResult } from '@scrabble/shared';
+import { RACK_SIZE, type GameState, type MoveResult } from '@scrabble/shared';
 import { prisma } from '../db/prisma.js';
 
 /** Ids de toutes les parties en cours, pour la rehydratation au démarrage du serveur. */
@@ -86,6 +86,7 @@ export async function persistMove(state: GameState, gamePlayerId: string, result
         tilesPlaced: (result.tilesPlaced ?? undefined) as unknown as Prisma.InputJsonValue,
         wordsFormed: (result.wordsFormed ?? undefined) as unknown as Prisma.InputJsonValue,
         score: result.score,
+        isBingo: result.type === 'PLACE' && (result.tilesPlaced?.length ?? 0) === RACK_SIZE,
         rackAfter: (mover?.rack ?? []) as unknown as Prisma.InputJsonValue,
         triggeredBy: result.triggeredBy,
       },
@@ -97,9 +98,60 @@ export async function setPlayerConnected(gamePlayerId: string, isConnected: bool
   await prisma.gamePlayer.update({ where: { id: gamePlayerId }, data: { isConnected } });
 }
 
-/** Scrabbullshit : persiste le score d'un joueur modifié hors coup (bonus « +1 »). */
-export async function persistPlayerScore(gamePlayerId: string, score: number): Promise<void> {
-  await prisma.gamePlayer.update({ where: { id: gamePlayerId }, data: { score } });
+/**
+ * Scrabbullshit : enregistre un « +1 » (événement pour les stats/succès) et le score de l'auteur
+ * du mot dans la même transaction, pour que les deux ne divergent jamais.
+ */
+export async function persistBonusClick(params: {
+  gameId: string;
+  turnNumber: number;
+  word: string;
+  fromPlayerId: string;
+  toPlayerId: string;
+  points: number;
+  authorScore: number;
+}): Promise<void> {
+  await prisma.$transaction([
+    prisma.bonusClick.create({
+      data: {
+        gameId: params.gameId,
+        turnNumber: params.turnNumber,
+        word: params.word,
+        fromPlayerId: params.fromPlayerId,
+        toPlayerId: params.toPlayerId,
+        points: params.points,
+      },
+    }),
+    prisma.gamePlayer.update({ where: { id: params.toPlayerId }, data: { score: params.authorScore } }),
+  ]);
+}
+
+/**
+ * Scrabbullshit : trace d'une proposition de mot, de sa création à son issue. Ces écritures sont
+ * best-effort (statistiques) : une erreur est loguée mais ne doit jamais bloquer la partie.
+ */
+function bestEffort(label: string, op: Promise<unknown>): Promise<void> {
+  return op.then(
+    () => undefined,
+    (err: unknown) => {
+      console.error(`[${label}] enregistrement impossible :`, err);
+    },
+  );
+}
+
+export function persistProposalCreated(params: { id: string; gameId: string; proposerId: string; word: string }): Promise<void> {
+  return bestEffort('persistProposalCreated', prisma.wordProposal.create({ data: { ...params, outcome: 'PENDING' } }));
+}
+
+export function persistProposalVote(params: { proposalId: string; voterId: string; accept: boolean }): Promise<void> {
+  return bestEffort('persistProposalVote', prisma.proposalVote.create({ data: params }));
+}
+
+export function persistProposalResolved(id: string, outcome: 'ACCEPTED' | 'REJECTED' | 'CANCELLED'): Promise<void> {
+  return bestEffort(
+    'persistProposalResolved',
+    prisma.wordProposal.update({ where: { id }, data: { outcome, resolvedAt: new Date() } }),
+  );
 }
 
 /** Scrabbullshit : persiste les mots acceptés à l'unanimité pour cette partie. */
