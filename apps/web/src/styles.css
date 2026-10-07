@@ -9,6 +9,9 @@
   --tile-bg: #f2d9a0;
   --tile-border: #c9a45c;
   --tile-blank-bg: #fff7e6;
+  /* Tuiles déjà posées sur le plateau. */
+  --placed-tile-bg: #f2d9a0;
+  --placed-tile-ink: #2a2018;
   /* Palette des cases bonus : tons chauds différenciés (du plus rare au plus courant). */
   --tw: #c1440e;
   --tw-ink: #fff3e9;
@@ -44,6 +47,8 @@
   --tile-bg: #4a3a22;
   --tile-border: #6b5330;
   --tile-blank-bg: #3a2f1e;
+  --placed-tile-bg: #4a3a22;
+  --placed-tile-ink: #ecdfcb;
   --tw: #8a2f0a;
   --tw-ink: #ffe9d8;
   --dw: #7a4a35;
@@ -270,6 +275,14 @@ button:disabled {
 }
 .cell--center {
   background: var(--cell-center-bg);
+}
+.cell--confirmed {
+  background: var(--placed-tile-bg);
+  border-color: var(--tile-border);
+}
+.cell--confirmed .tile-letter,
+.cell--confirmed .tile-value {
+  color: var(--placed-tile-ink);
 }
 .cell--selected {
   outline: 2px solid var(--accent);

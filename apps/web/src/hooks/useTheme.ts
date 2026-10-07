@@ -43,6 +43,8 @@ export const CUSTOMIZABLE_COLORS: ReadonlyArray<{
       { key: '--tile-bg', label: 'Fond des tuiles' },
       { key: '--tile-border', label: 'Bordure des tuiles' },
       { key: '--tile-blank-bg', label: 'Tuile joker' },
+      { key: '--placed-tile-bg', label: 'Tuiles posées sur le plateau' },
+      { key: '--placed-tile-ink', label: 'Lettres des tuiles posées' },
     ],
   },
   {
