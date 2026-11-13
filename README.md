@@ -74,6 +74,17 @@ cd infra
 docker compose exec server node_modules/.bin/tsx prisma/seed/import-words.ts
 ```
 
+**Mot de passe oublié** : pas de réinitialisation en self-service. Un script définit un nouveau
+mot de passe (8 à 72 caractères) ; sans second argument, il en génère un temporaire et l'affiche :
+
+```bash
+cd infra
+docker compose exec server node_modules/.bin/tsx prisma/seed/reset-password.ts email@exemple.fr
+# ou avec un mot de passe choisi : ... reset-password.ts email@exemple.fr "NouveauMdp123"
+```
+
+(En dev : `pnpm --filter @scrabble/server run reset-password <email> [mot_de_passe]`.)
+
 Si on l'oublie, le serveur logge au démarrage un avertissement « Dictionnaire vide… » et le jeu
 refuse tous les mots tant que la table `dictionary_words` est vide. Pour mettre à jour après un
 nouveau commit (aucune action dictionnaire nécessaire) :
