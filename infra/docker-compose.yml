@@ -55,6 +55,10 @@ services:
     # p. ex. pour mutualiser ce nginx/Certbot avec un autre service du VPS.
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    # Recharge nginx toutes les 6h pour qu'il prenne en compte les certificats renouvelés
+    # par certbot (sinon il continue de servir l'ancien certificat jusqu'à son expiration).
+    command: >-
+      /bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & exec nginx -g "daemon off;"'
     depends_on:
       - server
       - web
